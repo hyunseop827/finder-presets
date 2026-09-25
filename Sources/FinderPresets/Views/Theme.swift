@@ -48,22 +48,23 @@ enum Theme {
 	static let grip = Color(light: 0xC9CCD8, dark: 0x4A4C57)
 	static let shadow = Color(light: 0x1B1F3B, dark: 0x000000, lightAlpha: 0.07, darkAlpha: 0.35)
 	/// Fill behind white text (drop capsules): 5.3:1 light, 4.7:1 dark.
-	static let accent = Color(light: 0x4B5BE8, dark: 0x5563F0)
-	/// Accent as text, icon or stroke: 5.3:1 on the light well (4.8:1 on the canvas), 6.3–6.9:1 dark.
-	static let accentText = Color(light: 0x4B5BE8, dark: 0x8C9AFF)
+	static let accent = Color(light: 0x1F66D6, dark: 0x1E6FE3)
+	/// Accent as text, icon or stroke: 5.3:1 on the light well (4.9:1 on the canvas), 7.2–8.0:1 dark.
+	static let accentText = Color(light: 0x1F66D6, dark: 0x6BB4FF)
 	/// Warning text and icons (the old `.orange` was 2.2:1 on white): 5.0:1 on the light well (4.6:1 on the canvas),
 	/// 8.6:1 or more dark.
 	static let warning = Color(light: 0xB45309, dark: 0xF5B544)
 	static let success = Color(light: 0x1E7F45, dark: 0x4CC983)
 
-	/// The app icon's gradient. Decoration only (empty-state symbols, "image" cells of the thumbnails) — never behind text.
+	/// The app icon's two blues, sky to royal (lighter in dark mode). Decoration only (empty-state symbols, "image" cells
+	/// of the thumbnails) — never behind text.
+	static let brandColors = [Color(light: 0x2A8CF5, dark: 0x5CC0FF), Color(light: 0x1D5FD8, dark: 0x2F7CF0)]
 	static var brand: LinearGradient {
-		LinearGradient(colors: [Color(hex: 0x3890FF), Color(hex: 0x6666FA), Color(hex: 0x9445EB)],
-		               startPoint: .topLeading, endPoint: .bottomTrailing)
+		LinearGradient(colors: brandColors, startPoint: .topLeading, endPoint: .bottomTrailing)
 	}
-	/// Darker variant that carries white glyphs (step badges, tiles): 4.7:1 / 6.1:1.
+	/// Darker variant that carries white glyphs (step badges, tiles): 4.7:1 / 7.4:1.
 	static var badge: LinearGradient {
-		LinearGradient(colors: [Color(hex: 0x2E6FDF), Color(hex: 0x7B3AD6)], startPoint: .topLeading, endPoint: .bottomTrailing)
+		LinearGradient(colors: [Color(hex: 0x1E6FE3), Color(hex: 0x1648CE)], startPoint: .topLeading, endPoint: .bottomTrailing)
 	}
 
 	static func hairline(_ contrast: ColorSchemeContrast) -> Color { contrast == .increased ? strokeHighContrast : hairline }

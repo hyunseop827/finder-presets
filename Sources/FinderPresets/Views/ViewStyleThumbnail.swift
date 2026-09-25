@@ -79,7 +79,7 @@ struct ViewStyleThumbnail: View {
 	private static let ink = Color(light: 0xA9ADBC, dark: 0x6E717D)
 	private static let chipText = Color(light: 0x5F6475, dark: 0xA3A6B2)
 	private static let folderBlue = Color(light: 0x7FB2FF, dark: 0x4F8FE8)
-	private static let imageGradient = Gradient(colors: [Color(hex: 0x3890FF), Color(hex: 0x9445EB)])
+	private static let imageGradient = Gradient(colors: Theme.brandColors)
 
 	private static func drawIcons(_ ctx: inout GraphicsContext, _ area: CGRect, _ s: ViewSettings) {
 		let iconSize = CGFloat(s.icon.iconSize ?? 64)
