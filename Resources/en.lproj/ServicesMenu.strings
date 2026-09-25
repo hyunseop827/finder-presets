@@ -1,0 +1,5 @@
+/* Finder services (Info.plist NSServices; FinderService in Sources/FinderPresets/FinderServices.swift) */
+"Add Folder to Finder Presets" = "Add Folder to Finder Presets";
+"Make Preset with Finder Presets" = "Make Preset with Finder Presets";
+"Apply with Finder Presets…" = "Apply with Finder Presets…";
+"Apply Quick Preset to Front Finder Window" = "Apply Quick Preset to Front Finder Window";

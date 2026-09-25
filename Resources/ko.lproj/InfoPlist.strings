@@ -1,0 +1,8 @@
+/* Finder Presets — Info.plist의 한국어 문구 (Info.plist 자체와 같은 문구; 영어는 ../en.lproj/InfoPlist.strings). */
+"NSAppleEventsUsageDescription" = "보기 설정을 적용할 때 Finder를 다시 시작하고(그 전에 열려 있던 Finder 창의 폴더를 읽어 다시 열기 위해), 빠른 적용에서 앞 Finder 창의 폴더와 그 창의 보기를 읽기 위해 Finder를 제어합니다.";
+"NSDesktopFolderUsageDescription" = "데스크탑 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSDocumentsFolderUsageDescription" = "문서 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSDownloadsFolderUsageDescription" = "다운로드 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSRemovableVolumesUsageDescription" = "외장 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSNetworkVolumesUsageDescription" = "네트워크 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSFileProviderDomainUsageDescription" = "클라우드 폴더의 Finder 보기 설정을 읽기 위해 필요합니다.";

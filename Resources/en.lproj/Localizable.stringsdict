@@ -1,0 +1,811 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>%@ %lld개 폴더</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%@: %#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>이 프리셋을 지정한 폴더 %lld개는
+"선택한 프리셋 사용"이 됩니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>The folder assigned to it goes back to "Selected preset".</string>
+			<key>other</key>
+			<string>The %lld folders assigned to it go back to "Selected preset".</string>
+		</dict>
+	</dict>
+	<key>프리셋 %lld개를 불러왔습니다: %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Imported %#@presets@: %@</string>
+		<key>presets</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld preset</string>
+			<key>other</key>
+			<string>%lld presets</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더를 바꿉니다 (%@).</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ will change (%@).</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>완료: %lld개 폴더 변경</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Done: %#@folders@ changed</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>아이콘 크기나 간격이 바뀌는 폴더 %lld개는 겹치지 않게 아이콘 자리를 새로 잡습니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Icons in the folder whose icon size or spacing changes are placed anew so they do not overlap.</string>
+			<key>other</key>
+			<string>Icons in %lld folders whose icon size or spacing changes are placed anew so they do not overlap.</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더를 바꿉니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ will change.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>홈 폴더 %lld개는 이미 변경됨 (되돌리기: 툴바의 "기록")</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ already changed (to undo: "History" in the toolbar)</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld home folder</string>
+			<key>other</key>
+			<string>%lld home folders</string>
+		</dict>
+	</dict>
+	<key>Finder 기본 보기는 바꾸지 못했습니다: %@
+
+홈 폴더 %lld개는 이미 변경됐습니다. 되돌리려면 툴바의 "기록"에서 이 작업을 고르세요.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Finder's default view could not be changed: %@
+
+%#@folders@ already changed. To undo, choose this operation in "History" in the toolbar.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld home folder has</string>
+			<key>other</key>
+			<string>%lld home folders have</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더 변경</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ changed</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>텍스트 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@items@</string>
+		<key>items</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld text item</string>
+			<key>other</key>
+			<string>%lld text items</string>
+		</dict>
+	</dict>
+	<key>Finder에서 폴더 %lld개를 목록에 추가했습니다: %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Added %#@folders@ from Finder to the list: %@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>Finder의 폴더로 프리셋 %lld개를 만들었습니다: %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Made %#@presets@ from Finder folders: %@</string>
+		<key>presets</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld preset</string>
+			<key>other</key>
+			<string>%lld presets</string>
+		</dict>
+	</dict>
+	<key>오래된 기록 %lld개 정리 실패: %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Cleanup of %#@records@ failed: %@</string>
+		<key>records</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld old record</string>
+			<key>other</key>
+			<string>%lld old records</string>
+		</dict>
+	</dict>
+	<key>아이콘 자리만 새로 잡은 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>icons placed anew in %lld folder</string>
+			<key>other</key>
+			<string>icons placed anew in %lld folders</string>
+		</dict>
+	</dict>
+	<key>아이콘 자리만 되돌린 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>icon positions put back in %lld folder</string>
+			<key>other</key>
+			<string>icon positions put back in %lld folders</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>같은 시스템 전체 적용으로 홈 폴더 %lld개도 바뀌었습니다(%@ 기록). 그 작업은 따로 되돌리세요.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>The same system-wide apply also changed %#@folders@ (record of %@). Undo it separately.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld home folder</string>
+			<key>other</key>
+			<string>%lld home folders</string>
+		</dict>
+	</dict>
+	<key>읽지 못한 기록 %lld개는 그대로 둡니다</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@records@ left alone</string>
+		<key>records</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld unreadable record</string>
+			<key>other</key>
+			<string>%lld unreadable records</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더를 이 작업 전의 보기 설정으로 되돌립니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder goes back to its view settings from before this operation.</string>
+			<key>other</key>
+			<string>%lld folders go back to their view settings from before this operation.</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더는 이미 적용 전 상태라 그대로 둡니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder is already as it was before and is left alone.</string>
+			<key>other</key>
+			<string>%lld folders are already as they were before and are left alone.</string>
+		</dict>
+	</dict>
+	<key>충돌 %lld개: 적용한 뒤 보기 설정이 다시 바뀐 폴더는 건너뜁니다(그 뒤의 변경을 지킵니다).</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@conflicts@: folders whose view settings changed again after the apply are skipped (the later change is kept).</string>
+		<key>conflicts</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld conflict</string>
+			<key>other</key>
+			<string>%lld conflicts</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더를 되돌리는 중…</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Undoing %#@folders@…</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>총 %lld개 폴더를 바꿉니다: %@.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ will change: %@.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>지정한 폴더 %lld개는 다시 적용해야 새 값으로 바뀝니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Its assigned folder changes when you apply again.</string>
+			<key>other</key>
+			<string>Its %lld assigned folders change when you apply again.</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개에 지정된 프리셋입니다. 이미 적용한 폴더는 다시 적용해야 바뀝니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Assigned to %#@folders@. Folders already applied change when you apply again.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개에 지정됨</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Assigned to %#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더 제거</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Remove %lld Folder</string>
+			<key>other</key>
+			<string>Remove %lld Folders</string>
+		</dict>
+	</dict>
+	<key>옵션 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@options@</string>
+		<key>options</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld option</string>
+			<key>other</key>
+			<string>%lld options</string>
+		</dict>
+	</dict>
+	<key>나머지 옵션 %lld개는 유지</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@options@</string>
+		<key>options</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>The other option is kept</string>
+			<key>other</key>
+			<string>The other %lld options are kept</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개가 모두 이미 적용 전 상태라 아무것도 쓰지 않고 되돌린 것으로 기록했습니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>The folder was already as before, so nothing was written; the operation is recorded as undone.</string>
+			<key>other</key>
+			<string>All %lld folders were already as before, so nothing was written; the operation is recorded as undone.</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개가 모두 이미 적용 전 상태입니다. 아무것도 쓰지 않고 이 작업을 되돌린 것으로 기록합니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>The folder is already as it was before this operation. Nothing is written; the operation is recorded as undone.</string>
+			<key>other</key>
+			<string>All %lld folders are already as they were before this operation. Nothing is written; the operation is recorded as undone.</string>
+		</dict>
+	</dict>
+	<key>읽지 못함 %lld개: 설정 파일(.DS_Store)을 읽을 수 없어 되돌리지 못합니다(실패로 기록).</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Unreadable: its settings file (.DS_Store) cannot be read, so it cannot be undone (recorded as failed).</string>
+			<key>other</key>
+			<string>%lld unreadable: their settings files (.DS_Store) cannot be read, so they cannot be undone (recorded as failed).</string>
+		</dict>
+	</dict>
+	<key>%lld개 항목</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@items@</string>
+		<key>items</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld item</string>
+			<key>other</key>
+			<string>%lld items</string>
+		</dict>
+	</dict>
+	<key>유지 %lld개: Finder 기본값으로 그림</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@kept@</string>
+		<key>kept</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld kept: drawn with Finder's default</string>
+			<key>other</key>
+			<string>%lld kept: drawn with Finder's defaults</string>
+		</dict>
+	</dict>
+	<key>건너뛴 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@skipped@</string>
+		<key>skipped</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder skipped</string>
+			<key>other</key>
+			<string>%lld folders skipped</string>
+		</dict>
+	</dict>
+	<key>실패한 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@failed@</string>
+		<key>failed</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder failed</string>
+			<key>other</key>
+			<string>%lld folders failed</string>
+		</dict>
+	</dict>
+	<key>바뀐 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder changed</string>
+			<key>other</key>
+			<string>%lld folders changed</string>
+		</dict>
+	</dict>
+	<key>되돌린 폴더 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder restored</string>
+			<key>other</key>
+			<string>%lld folders restored</string>
+		</dict>
+	</dict>
+	<key>기록 %lld개</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@records@</string>
+		<key>records</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld record</string>
+			<key>other</key>
+			<string>%lld records</string>
+		</dict>
+	</dict>
+	<key>%lld개 폴더의 아이콘 자리를 이 작업 전으로 되돌립니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder gets its icon positions from before this operation back.</string>
+			<key>other</key>
+			<string>%lld folders get their icon positions from before this operation back.</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개를 열었습니다: %@.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Opened %#@folders@: %@.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>폴더가 %lld개라 열지 않았습니다(한 번에 %lld개까지 엽니다). 필요한 폴더는 직접 여세요.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Did not open the %#@folders@ (the app opens up to %lld at once). Open the ones you need yourself.</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder</string>
+			<key>other</key>
+			<string>%lld folders</string>
+		</dict>
+	</dict>
+	<key>Finder가 종료하면서 덮어쓴 폴더 %lld개는 다시 썼습니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder Finder wrote over as it quit was written again.</string>
+			<key>other</key>
+			<string>%lld folders Finder wrote over as it quit were written again.</string>
+		</dict>
+	</dict>
+	<key>Finder가 종료하면서 덮어쓴 폴더 %lld개는 다시 쓰는 데 실패했습니다: %@</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ %@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>Finder wrote over %lld folder as it quit, and writing it again failed:</string>
+			<key>other</key>
+			<string>Finder wrote over %lld folders as it quit, and writing them again failed:</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개는 Finder를 다시 시작한 뒤에도 쓴 값이 아닙니다(Finder가 덮어씀).</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder does not hold what was written even after the restart (Finder overwrote it).</string>
+			<key>other</key>
+			<string>%lld folders do not hold what was written even after the restart (Finder overwrote them).</string>
+		</dict>
+	</dict>
+	<key>폴더 %lld개는 다시 시작하기 전에 이미 쓴 값이 아니어서 다시 쓰지 않았습니다(창을 닫을 때 Finder가 덮어썼거나 다른 곳에서 바뀜).</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld folder no longer held what was written before the restart and was not written again (Finder overwrote it as its window closed, or it was changed elsewhere).</string>
+			<key>other</key>
+			<string>%lld folders no longer held what was written before the restart and were not written again (Finder overwrote them as a window closed, or they were changed elsewhere).</string>
+		</dict>
+	</dict>
+	<key>열려 있던 Finder 창 %lld개도 다시 열었습니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Also reopened %#@windows@.</string>
+		<key>windows</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld Finder window that was open</string>
+			<key>other</key>
+			<string>%lld Finder windows that were open</string>
+		</dict>
+	</dict>
+	<key>열려 있던 Finder 창 %lld개를 다시 열었습니다.</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>Reopened %#@windows@.</string>
+		<key>windows</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld Finder window that was open</string>
+			<key>other</key>
+			<string>%lld Finder windows that were open</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

@@ -1,0 +1,49 @@
+# Unit tests and a release build of the app on every push to main and every pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-and-build:
+    name: 테스트와 앱 빌드
+    # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26 or later.
+    # macos-26 is the Apple Silicon image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app:
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Shared with release.yml. scripts/toolchain.sh then uses the Xcode chosen here.
+      - name: Xcode 선택 (26 이상 중 최신 정식 버전)
+        run: ./scripts/select-xcode.sh
+
+      - name: 단위 테스트
+        run: ./scripts/test.sh
+
+      - name: 앱 빌드 (release, ad-hoc 서명)
+        run: ./scripts/build-app.sh release
+
+      - name: 앱 번들 확인
+        run: |
+          app="build/Finder Presets.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          plutil -lint "$app/Contents/Info.plist"
+          lipo -archs "$app/Contents/MacOS/FinderPresets"

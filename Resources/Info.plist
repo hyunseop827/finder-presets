@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key><string>ko</string>
+	<!-- The app's languages: Korean (the development language) and English, from ko.lproj and en.lproj
+	     (Localizable, InfoPlist, ServicesMenu), which scripts/build-app.sh copies from Resources into the bundle. -->
+	<key>CFBundleLocalizations</key><array><string>ko</string><string>en</string></array>
+	<key>CFBundleExecutable</key><string>FinderPresets</string>
+	<key>CFBundleIdentifier</key><string>com.hyunseop.FinderPresets</string>
+	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+	<key>CFBundleName</key><string>Finder Presets</string>
+	<key>CFBundleDisplayName</key><string>Finder Presets</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundleShortVersionString</key><string>0.1.0</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>14.0</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+	<key>NSPrincipalClass</key><string>NSApplication</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSAppleEventsUsageDescription</key><string>보기 설정을 적용할 때 Finder를 다시 시작하고(그 전에 열려 있던 Finder 창의 폴더를 읽어 다시 열기 위해), 빠른 적용에서 앞 Finder 창의 폴더와 그 창의 보기를 읽기 위해 Finder를 제어합니다.</string>
+	<key>NSDesktopFolderUsageDescription</key><string>데스크탑 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.</string>
+	<key>NSDocumentsFolderUsageDescription</key><string>문서 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.</string>
+	<key>NSDownloadsFolderUsageDescription</key><string>다운로드 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.</string>
+	<key>NSRemovableVolumesUsageDescription</key><string>외장 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.</string>
+	<key>NSNetworkVolumesUsageDescription</key><string>네트워크 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.</string>
+	<key>NSFileProviderDomainUsageDescription</key><string>클라우드 폴더의 Finder 보기 설정을 읽기 위해 필요합니다.</string>
+	<!-- The usage descriptions above are Korean; InfoPlist.strings in Resources/en.lproj and ko.lproj translate them. -->
+	<!-- Finder's right-click menu for folders (Sources/FinderPresets/FinderServices.swift). The titles are translated by
+	     ServicesMenu.strings in Resources/en.lproj and ko.lproj, which scripts/build-app.sh copies into the bundle. An empty
+	     NSRequiredContext enables the services without a visit to the keyboard settings. -->
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Add Folder to Finder Presets</string></dict>
+			<key>NSMessage</key><string>addFoldersFromFinder</string>
+			<key>NSRequiredContext</key><dict/>
+			<key>NSSendFileTypes</key><array><string>public.folder</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Make Preset with Finder Presets</string></dict>
+			<key>NSMessage</key><string>makePresetsFromFinder</string>
+			<key>NSRequiredContext</key><dict/>
+			<key>NSSendFileTypes</key><array><string>public.folder</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Apply with Finder Presets…</string></dict>
+			<key>NSMessage</key><string>applyFromFinder</string>
+			<key>NSRequiredContext</key><dict/>
+			<key>NSSendFileTypes</key><array><string>public.folder</string></array>
+		</dict>
+		<!-- The quick preset (Sources/FinderPresets/QuickPreset.swift): no send types, so it is offered in every app with or
+		     without a selection and its shortcut works anywhere; it asks Finder for its front window's folder itself. No
+		     NSKeyEquivalent: Info.plist can only give ⌘ or ⌘⇧ combinations, which Finder and other apps already use. The
+		     user sets the shortcut in System Settings > Keyboard > Keyboard Shortcuts > Services (recommended ⌃⌥⌘P). -->
+		<dict>
+			<key>NSMenuItem</key><dict><key>default</key><string>Apply Quick Preset to Front Finder Window</string></dict>
+			<key>NSMessage</key><string>applyQuickPreset</string>
+			<key>NSRequiredContext</key><dict/>
+		</dict>
+	</array>
+</dict>
+</plist>

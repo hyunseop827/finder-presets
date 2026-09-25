@@ -1,0 +1,40 @@
+# macOS Finder metadata (this app writes these files; never commit real ones).
+# Only files named exactly ".DS_Store" are ignored, so the test fixture
+# Tests/FinderPresetsCoreTests/Fixtures/finder-native-parent.DS_Store stays tracked.
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+Icon?
+
+# SwiftPM / Xcode build output
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# App bundle, generated iconset and preview made by scripts/build-app.sh
+# (Resources/AppIcon.icns is tracked; delete it to force a redraw)
+/build/
+
+# Logs and local editor / tool settings
+*.log
+.vscode/
+.idea/
+.claude/
+
+# Release outputs and signing material. scripts/make-dmg.sh writes the disk image and its checksum into build/
+# (ignored above); a copy made anywhere else must not be committed either. Certificates (.p12, .cer), App Store
+# Connect API keys (AuthKey_<id>.p8; *.p8 covers them, the explicit name documents what they look like),
+# provisioning profiles and a local .env with secrets belong in the keychain or the repository secrets
+# (see .github/workflows/release.yml), never in git.
+*.dmg
+*.dmg.sha256
+*.p12
+*.p8
+AuthKey_*.p8
+*.cer
+*.provisionprofile
+.env

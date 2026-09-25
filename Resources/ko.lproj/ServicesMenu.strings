@@ -1,0 +1,5 @@
+/* Finder services (Info.plist NSServices; FinderService in Sources/FinderPresets/FinderServices.swift) */
+"Add Folder to Finder Presets" = "Finder Presets에 폴더 추가";
+"Make Preset with Finder Presets" = "Finder Presets로 프리셋 만들기";
+"Apply with Finder Presets…" = "Finder Presets로 적용…";
+"Apply Quick Preset to Front Finder Window" = "빠른 프리셋을 앞 Finder 창에 적용";

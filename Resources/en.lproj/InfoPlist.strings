@@ -1,0 +1,9 @@
+/* Finder Presets — English texts of Info.plist (the Korean ones are in Info.plist itself and in
+   ../ko.lproj/InfoPlist.strings; a unit test keeps the three in step). */
+"NSAppleEventsUsageDescription" = "Controls Finder to restart it when view settings are applied (reading which folders its windows show, to open them again), and to read the front Finder window's folder and view for the quick preset.";
+"NSDesktopFolderUsageDescription" = "Needed to read and write the Finder view settings of the Desktop folder.";
+"NSDocumentsFolderUsageDescription" = "Needed to read and write the Finder view settings of the Documents folder.";
+"NSDownloadsFolderUsageDescription" = "Needed to read and write the Finder view settings of the Downloads folder.";
+"NSRemovableVolumesUsageDescription" = "Needed to read and write the Finder view settings of folders on external volumes.";
+"NSNetworkVolumesUsageDescription" = "Needed to read and write the Finder view settings of folders on network volumes.";
+"NSFileProviderDomainUsageDescription" = "Needed to read the Finder view settings of cloud folders.";
