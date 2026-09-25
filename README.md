@@ -82,7 +82,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ```
 
 - **Requires** Xcode 26 or later (Swift 6.2).
-- **Releases:** pushing a `v*` tag builds the DMG and publishes a GitHub release.
+- **Releases:** raise the version in `Resources/Info.plist` and write the changes in `.github/release-notes.md` (first line `# v<version>`). Once the push to `main` passes CI, CI tags `v<version>`, builds the DMG and publishes the release. Changing the app without a new version fails CI.
 - **Test data:** set `FINDER_PRESETS_DATA_DIR` to another folder so development runs don't touch your real presets and history.
 
 ## License

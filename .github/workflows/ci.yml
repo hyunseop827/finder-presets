@@ -1,4 +1,5 @@
-# Unit tests and a release build of the app on every push to main and every pull request.
+# Unit tests and a release build of the app on every push to main and every pull request. On main, a passing run then
+# calls release.yml, which releases the version in Resources/Info.plist if it is new (see there).
 name: CI
 
 on:
@@ -9,9 +10,10 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a pull request's run, but never a run on main (its release job may be half way).
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -47,3 +49,12 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           plutil -lint "$app/Contents/Info.plist"
           lipo -archs "$app/Contents/MacOS/FinderPresets"
+
+  release:
+    name: 릴리스
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test-and-build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    secrets: inherit

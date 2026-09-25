@@ -82,7 +82,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ```
 
 - **필요 환경:** Xcode 26 이상(Swift 6.2).
-- **릴리스:** `v*` 태그를 푸시하면 DMG를 만들어 GitHub 릴리스로 올립니다.
+- **릴리스:** `Resources/Info.plist`의 버전을 올리고 `.github/release-notes.md`에 바뀐 점을 적습니다(첫 줄 `# v<버전>`). `main`에 푸시해 CI를 통과하면 CI가 `v<버전>` 태그를 달고 DMG를 만들어 릴리스를 올립니다. 버전을 올리지 않고 앱을 바꾸면 CI가 실패합니다.
 - **테스트 데이터:** 개발 중에는 `FINDER_PRESETS_DATA_DIR`로 다른 폴더를 지정해 실제 프리셋과 기록을 건드리지 않게 합니다.
 
 ## 라이선스

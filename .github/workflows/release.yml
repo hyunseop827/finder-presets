@@ -1,9 +1,13 @@
-# Builds FinderPresets-<version>.dmg (+ .sha256) with scripts/make-dmg.sh.
-# - push of a v* tag: tests → dmg → workflow artifact → GitHub Release with the dmg and checksum attached, plus the
-#   same dmg under the fixed name FinderPresets.dmg (+ FinderPresets.dmg.sha256), so
-#   https://github.com/<owner>/<repo>/releases/latest/download/FinderPresets.dmg always serves the latest release
-#   (GitHub's "latest" skips pre-releases, so a pre-release's copy is only reachable through its own tag)
-# - manual run (workflow_dispatch): tests → dmg → workflow artifact only
+# Releases the version in Resources/Info.plist. Called by ci.yml after the tests pass on a push to main; nothing else
+# starts it, so every release comes from a tested commit on main and a person never pushes a tag.
+#
+# - Version not released yet: builds FinderPresets-<version>.dmg (+ .sha256) with scripts/make-dmg.sh, tags the commit
+#   v<version>, publishes the GitHub release with the notes of .github/release-notes.md, attaches the dmg, its checksum
+#   and the same dmg under the fixed name FinderPresets.dmg (+ .sha256), then downloads the fixed name back through
+#   https://github.com/<owner>/<repo>/releases/latest/download/FinderPresets.dmg (the README link) and checks it.
+# - Version already released: nothing to do, unless the app changed since its tag without a new version, which fails.
+# - "Re-run failed jobs" on the CI run finishes a run that stopped half way (tag or draft release left behind), and
+#   downloads a release that this commit already published again to check it.
 #
 # Signing and notarization happen only when these repository secrets exist; otherwise only the app is ad-hoc signed,
 # the dmg itself is unsigned, nothing is notarized, and the release notes say so.
@@ -16,75 +20,141 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      version:
-        description: '버전 (예: 0.2.0, 0.2.0-beta.1). 비우면 태그 또는 Resources/Info.plist 의 버전'
-        required: false
-        type: string
+  workflow_call:
 
 permissions:
   contents: read
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  dmg:
-    name: DMG 만들기
+  release:
+    name: DMG와 GitHub 릴리스
     # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26 or later.
     # macos-26 is the Apple Silicon image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
     runs-on: macos-26
-    # Two notarization waits (app, then dmg) of up to 30 minutes each, plus tests and the release build.
+    # Two notarization waits (app, then dmg) of up to 30 minutes each, plus the release build.
     timeout-minutes: 90
     permissions:
-      contents: write # gh release create / upload
+      contents: write # version tag, gh release create / upload / edit
+    # One release at a time; a newer push waits instead of cancelling a release half way.
+    concurrency:
+      group: finder-presets-release
+      cancel-in-progress: false
     steps:
-      - name: 체크아웃
+      - name: 체크아웃 (검사한 커밋, 태그 포함)
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
+
+      - name: 버전과 릴리스 상태 확인
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          fail() { echo "::error::$*"; exit 1; }
+          # Files that make up the app: a change here after a release needs a new version.
+          app_inputs=(Sources Resources Package.swift Package.resolved scripts/build-app.sh scripts/make-icon.swift)
+          notes=.github/release-notes.md
+
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          [[ "$version" =~ $semver ]] || fail "Resources/Info.plist 의 CFBundleShortVersionString 형식이 잘못되었습니다: '$version' (예: 1.2.0)"
+          tag="v$version"
+
+          [[ "$(git rev-parse 'HEAD^{commit}')" == "$GITHUB_SHA" ]] || fail "체크아웃한 커밋이 테스트한 커밋과 다릅니다."
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main || fail "main 에 없는 커밋은 릴리스하지 않습니다."
+
+          # Never release backwards: no existing vX.Y.Z tag may be newer than this version.
+          newer() {   # newer A B: A > B for X.Y.Z (bash 3.2)
+            local i a b
+            IFS=. read -r -a a <<< "$1"
+            IFS=. read -r -a b <<< "$2"
+            for i in 0 1 2; do
+              if (( 10#${a[i]} > 10#${b[i]} )); then return 0; fi
+              if (( 10#${a[i]} < 10#${b[i]} )); then return 1; fi
+            done
+            return 1
+          }
+          tags="$(git tag --list 'v*')"
+          while IFS= read -r known; do
+            [[ "$known" =~ ^v ]] && [[ "${known#v}" =~ $semver ]] || continue
+            if newer "${known#v}" "$version"; then
+              fail "$tag 가 이미 있는 $known 보다 낮습니다. Resources/Info.plist 의 버전을 올리세요."
+            fi
+          done <<< "$tags"
+
+          # Release notes: '# vX.Y.Z' on the first line, then what changed.
+          [[ -f "$notes" ]] || fail "$notes 가 없습니다."
+          first="$(head -n 1 "$notes" | tr -d '\r')"
+          [[ "${first%"${first##*[![:space:]]}"}" == "# $tag" ]] || fail "$notes 의 첫 줄은 '# $tag' 이어야 합니다 (지금: '$first')."
+          body="$(tail -n +2 "$notes")"
+          [[ -n "${body//[[:space:]]/}" ]] || fail "$notes 에 바뀐 점을 적으세요."
+          printf '%s\n' "$body" > "$RUNNER_TEMP/release-body.md"
+
+          tag_commit=""
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            tag_commit="$(git rev-parse "refs/tags/$tag^{commit}")"
+          fi
+          # Drafts carry their future tag name too; the API call fails loudly instead of reading as "no release".
+          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | [.tag_name, (.draft | tostring)] | @tsv')"
+          release_state=none
+          while IFS=$'\t' read -r name draft; do
+            [[ "$name" == "$tag" ]] || continue
+            if [[ "$draft" == true ]]; then
+              [[ "$release_state" == published ]] || release_state=draft
+            else
+              release_state=published
+            fi
+          done <<< "$releases"
+
+          publish=true
+          verify=true
+          if [[ "$release_state" == published ]]; then
+            [[ -n "$tag_commit" ]] || fail "릴리스 $tag 는 있는데 태그를 찾지 못했습니다."
+            set +e
+            git diff --quiet "$tag_commit" HEAD -- "${app_inputs[@]}"
+            changed=$?
+            set -e
+            case $changed in
+              0) ;;
+              1) fail "$tag 릴리스 뒤에 앱이 바뀌었습니다. Resources/Info.plist 의 버전을 올리고 $notes 를 새 버전으로 고치세요." ;;
+              *) fail "$tag 와 지금 커밋을 비교하지 못했습니다." ;;
+            esac
+            publish=false
+            # A re-run of the commit that published it checks the download again (menu-pulse does the same).
+            if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then verify=false; fi
+            echo "$tag 는 이미 릴리스되었고 그 뒤로 앱은 바뀌지 않았습니다. 새로 올릴 것이 없습니다."
+          elif [[ -n "$tag_commit" && "$tag_commit" != "$GITHUB_SHA" ]]; then
+            fail "태그 $tag 가 다른 커밋(${tag_commit:0:7})에 있고 아직 릴리스되지 않았습니다. 그 커밋의 CI 실행에서 'Re-run failed jobs'로 마치거나, 버전을 올리세요. 태그는 옮기지 않습니다."
+          else
+            echo "$tag 를 릴리스합니다 (태그: $([[ -n "$tag_commit" ]] && echo 있음 || echo 없음), 릴리스: $release_state)."
+          fi
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "publish=$publish"
+            echo "verify=$verify"
+            echo "tag_exists=$([[ -n "$tag_commit" ]] && echo true || echo false)"
+            echo "release_state=$release_state"
+          } >> "$GITHUB_OUTPUT"
 
       # Shared with ci.yml. scripts/toolchain.sh then uses the Xcode chosen here.
       - name: Xcode 선택 (26 이상 중 최신 정식 버전)
+        if: steps.prepare.outputs.publish == 'true'
         run: ./scripts/select-xcode.sh
-
-      - name: 버전 정하기
-        id: version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          if [[ -n "$INPUT_VERSION" ]]; then
-            version="${INPUT_VERSION#v}"
-          elif [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            version="${GITHUB_REF_NAME#v}"
-          else
-            version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
-          fi
-          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::버전 형식이 잘못되었습니다 (예: 1.2.0, 1.2.0-beta.1)"
-            exit 1
-          fi
-          if [[ "$version" == *-* ]]; then prerelease=true; else prerelease=false; fi
-          echo "버전: $version (prerelease: $prerelease)"
-          {
-            echo "version=$version"
-            echo "prerelease=$prerelease"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: 단위 테스트
-        run: ./scripts/test.sh
 
       - name: 서명 인증서 가져오기 (시크릿이 있을 때만)
         id: signing
+        if: steps.prepare.outputs.publish == 'true'
         env:
           CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -125,6 +195,7 @@ jobs:
 
       - name: 공증 키 준비 (시크릿이 있을 때만)
         id: notary
+        if: steps.prepare.outputs.publish == 'true'
         env:
           SIGNING_ENABLED: ${{ steps.signing.outputs.enabled }}
           KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -152,8 +223,9 @@ jobs:
 
       - name: DMG 만들기
         id: dmg
+        if: steps.prepare.outputs.publish == 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.prepare.outputs.version }}
           APP_BUILD: ${{ github.run_number }}
           CODESIGN_IDENTITY: ${{ steps.signing.outputs.enabled == 'true' && secrets.CODESIGN_IDENTITY || '-' }}
           NOTARY_KEY_ID: ${{ steps.notary.outputs.enabled == 'true' && secrets.NOTARY_KEY_ID || '' }}
@@ -162,28 +234,33 @@ jobs:
           NOTARY_TIMEOUT: 30m
         run: ./scripts/make-dmg.sh "$VERSION"
 
-      - name: 워크플로 산출물 올리기
-        uses: actions/upload-artifact@v7
-        with:
-          name: FinderPresets-${{ steps.dmg.outputs.version }}
-          path: |
-            ${{ steps.dmg.outputs.dmg }}
-            ${{ steps.dmg.outputs.sha256 }}
-          if-no-files-found: error
-          compression-level: 0 # the dmg is already compressed
+      # Only after the dmg is built, so a failed build never leaves a tag behind. The token is handed to this one
+      # git command (the checkout keeps no credentials), the way actions/checkout itself authenticates.
+      - name: 버전 태그 만들기
+        if: steps.prepare.outputs.publish == 'true' && steps.prepare.outputs.tag_exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            tag -a "$TAG" --cleanup=verbatim -F .github/release-notes.md "$GITHUB_SHA"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          echo "::add-mask::$auth"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin "refs/tags/$TAG"
 
-      - name: GitHub Release 만들기
-        if: github.event_name == 'push' && github.ref_type == 'tag'
+      - name: GitHub 릴리스 올리기
+        if: steps.prepare.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.dmg.outputs.version }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_STATE: ${{ steps.prepare.outputs.release_state }}
           DMG: ${{ steps.dmg.outputs.dmg }}
           SHA: ${{ steps.dmg.outputs.sha256 }}
           SIGNED: ${{ steps.dmg.outputs.signed }}
           NOTARIZED: ${{ steps.dmg.outputs.notarized }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
           # The same dmg under a fixed name, with its own checksum line (shasum -c works on the downloaded file).
           latest="$RUNNER_TEMP/finder-presets-latest"
@@ -194,37 +271,77 @@ jobs:
           assets=("$DMG" "$SHA" "$latest/FinderPresets.dmg" "$latest/FinderPresets.dmg.sha256")
           notes="$RUNNER_TEMP/release-notes.md"
           {
-            echo "## Finder Presets $VERSION"
+            cat "$RUNNER_TEMP/release-body.md"
             echo
-            echo "\`${DMG##*/}\`를 열고 **Finder Presets**를 **Applications** 폴더로 끌어다 놓으세요. macOS 14 이상, Apple Silicon 전용입니다."
+            echo "## Install"
+            echo
+            echo "Open \`${DMG##*/}\` and drag **Finder Presets** to **Applications**. Apple Silicon, macOS 14 or later."
             echo
             if [[ "$NOTARIZED" == true ]]; then
-              echo "Developer ID로 서명하고 Apple 공증을 받은 디스크 이미지입니다."
+              echo "Signed with a Developer ID and notarized by Apple."
             elif [[ "$SIGNED" == true ]]; then
-              echo "> **공증되지 않음** (Developer ID 서명만 됨) — 처음 열 때 시스템 설정 > 개인정보 보호 및 보안 > 그래도 열기"
+              echo "> Signed with a Developer ID but **not notarized**. If macOS blocks the first launch, choose System Settings → Privacy & Security → Open Anyway."
             else
-              echo "> **서명·공증되지 않음** — 처음 열 때 시스템 설정 > 개인정보 보호 및 보안 > 그래도 열기"
-              echo ">"
-              echo "> ad-hoc 서명만 된 빌드라 macOS가 처음 실행을 막습니다. 앱을 한 번 연 뒤 위 설정 화면에서 \"그래도 열기\"를 누르세요."
+              echo "> Ad-hoc signed and **not notarized**. If macOS blocks the first launch, choose System Settings → Privacy & Security → Open Anyway."
             fi
             echo
             echo "SHA-256 (\`${DMG##*/}\`): \`$(cut -d' ' -f1 < "$SHA")\`"
             echo
-            if [[ "$PRERELEASE" == true ]]; then
-              echo "\`FinderPresets.dmg\`는 같은 파일의 고정 이름 사본입니다. 사전 릴리스라 releases/latest 링크로는 받을 수 없습니다(그 링크는 사전 릴리스가 아닌 최신 릴리스를 가리킵니다)."
-            else
-              echo "\`FinderPresets.dmg\`는 같은 파일의 고정 이름 사본입니다. 늘 최신 버전을 받는 링크: https://github.com/$GH_REPO/releases/latest/download/FinderPresets.dmg"
-            fi
+            echo "\`FinderPresets.dmg\` is the same file under a fixed name. Latest version, always: https://github.com/$GH_REPO/releases/latest/download/FinderPresets.dmg"
           } > "$notes"
-          args=(--title "Finder Presets $VERSION" --notes-file "$notes")
-          if [[ "$PRERELEASE" == true ]]; then args+=(--prerelease); fi
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            # Re-run of the same tag: replace the assets (the fixed-name copy included) and the notes.
-            gh release upload "$TAG" "${assets[@]}" --clobber
-            gh release edit "$TAG" "${args[@]}"
-          else
-            gh release create "$TAG" "${assets[@]}" --verify-tag "${args[@]}"
+          title="Finder Presets $VERSION"
+          if [[ "$RELEASE_STATE" == none ]]; then
+            gh release create "$TAG" --draft --verify-tag --title "$title" --notes-file "$notes"
           fi
+          is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
+          if [[ "$is_draft" != true ]]; then
+            echo "::error::$TAG 릴리스가 초안이 아닙니다 (isDraft: '$is_draft'). 이미 공개된 릴리스는 건드리지 않습니다."
+            exit 1
+          fi
+          gh release upload "$TAG" "${assets[@]}" --clobber
+          gh release edit "$TAG" --title "$title" --notes-file "$notes" --draft=false --prerelease=false --latest
+
+      - name: README 링크로 다시 받아 확인
+        if: steps.prepare.outputs.verify == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+          DMG: ${{ steps.dmg.outputs.dmg }} # empty on a re-run that built nothing
+        run: |
+          dir="$(mktemp -d "$RUNNER_TEMP/finder-presets-verify.XXXXXX")"
+          trap 'rm -rf -- "$dir"' EXIT
+          cd "$dir"
+          server="https://github.com/$GITHUB_REPOSITORY/releases"
+          # The README link serves the latest release. A re-run for an older version checks that version's own copy.
+          base="$server/latest/download"
+          expected=""
+          if [[ -z "$DMG" ]]; then
+            latest_tag="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name' || true)"
+            if [[ "$latest_tag" != "$TAG" ]]; then base="$server/download/$TAG"; fi
+            expected="$(curl -fsSL "$server/download/$TAG/FinderPresets-$VERSION.dmg.sha256" | cut -d' ' -f1)"
+            [[ -n "$expected" ]] || { echo "::error::$TAG 의 체크섬 파일을 받지 못했습니다."; exit 1; }
+          fi
+          same() {   # the download is the dmg of this release: built in this run, or matching the release's checksum
+            if [[ -n "$DMG" ]]; then cmp -s FinderPresets.dmg "$DMG"; else [[ "$(shasum -a 256 FinderPresets.dmg | cut -d' ' -f1)" == "$expected" ]]; fi
+          }
+          # The latest link can lag a few seconds behind the publish.
+          for attempt in 1 2 3 4 5 6; do
+            rm -f FinderPresets.dmg FinderPresets.dmg.sha256
+            if curl -fsSL -o FinderPresets.dmg "$base/FinderPresets.dmg" \
+              && curl -fsSL -o FinderPresets.dmg.sha256 "$base/FinderPresets.dmg.sha256" \
+              && same; then
+              break
+            fi
+            if [[ $attempt == 6 ]]; then
+              echo "::error::$base/FinderPresets.dmg 가 $TAG 의 DMG와 다르거나 받아지지 않습니다."
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
+          shasum -a 256 -c FinderPresets.dmg.sha256
+          hdiutil verify -quiet FinderPresets.dmg
+          echo "OK  $base/FinderPresets.dmg ($TAG)"
 
       - name: 임시 키체인과 키 파일 지우기
         if: always()
