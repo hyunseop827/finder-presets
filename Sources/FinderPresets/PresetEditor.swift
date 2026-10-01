@@ -369,15 +369,16 @@ struct PresetDraft: Equatable {
 
 	/// "새 프리셋", or "새 프리셋 2", "새 프리셋 3", … when the name is taken (compared like `finder-presets`, ignoring case).
 	static func newName(taken: [String]) -> String {
-		uniqueName(String(localized: "새 프리셋")) { name in taken.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }
+		uniqueName(String(localized: "새 프리셋"), among: taken)
 	}
 
-	/// `base`, or "`base` 2", "`base` 3", … — the first name that is not `taken` (a new preset, one made from a folder, an
-	/// imported one).
-	static func uniqueName(_ base: String, taken: (String) -> Bool) -> String {
-		guard taken(base) else { return base }
+	/// `base`, or "`base` 2", "`base` 3", … — the first name none of `taken` has, ignoring case like the editor's duplicate
+	/// warning and `finder-presets` (a new preset, one made from a folder, an imported one).
+	static func uniqueName(_ base: String, among taken: [String]) -> String {
+		let isTaken = { (name: String) in taken.contains { $0.caseInsensitiveCompare(name) == .orderedSame } }
+		guard isTaken(base) else { return base }
 		var n = 2
-		while taken("\(base) \(n)") { n += 1 }
+		while isTaken("\(base) \(n)") { n += 1 }
 		return "\(base) \(n)"
 	}
 

@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import FinderPresetsCore
 
 @main
 struct FinderPresetsApp: App {

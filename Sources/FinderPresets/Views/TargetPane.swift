@@ -244,6 +244,14 @@ struct PresetTag: View {
 	let assigned: Preset?
 	let tint: Color?
 
+	/// The tag's tooltip, also what VoiceOver reads as its hint. A preset that is assigned but not loaded is not "no
+	/// preset": the folder is skipped on apply (as the row's note says), whatever `fallbackNote` says for a folder without one.
+	static func help(_ target: TargetFolder, assigned: Preset?, model: AppModel) -> String {
+		if let assigned { return String(localized: "이 폴더에는 프리셋 \"\(assigned.name)\"을(를) 적용합니다.") }
+		if target.presetID != nil { return String(localized: "지정한 프리셋을 찾을 수 없어 적용할 때 건너뜁니다") }
+		return String(localized: "지정한 프리셋이 없습니다: \(model.fallbackNote(for: target)) 다른 프리셋을 고르면 이 폴더에는 그 프리셋이 적용됩니다.")
+	}
+
 	var body: some View {
 		let shown = assigned?.name ?? (target.presetID != nil ? String(localized: "찾을 수 없는 프리셋") : String(localized: "선택한 프리셋 사용"))
 		let missing = target.presetID != nil && assigned == nil
@@ -304,8 +312,7 @@ struct PresetTag: View {
 				.allowsHitTesting(false)
 				.accessibilityHidden(true)
 		}
-		.help(assigned.map { "이 폴더에는 프리셋 \"\($0.name)\"을(를) 적용합니다." }
-			?? "지정한 프리셋이 없습니다: \(model.fallbackNote(for: target)) 다른 프리셋을 고르면 이 폴더에는 그 프리셋이 적용됩니다.")
+		.help(Self.help(target, assigned: assigned, model: model))
 		// Its own name ("프리셋" is the area's title, "Presets" in English): the menu of this folder's preset.
 		.accessibilityLabel("이 폴더의 프리셋")
 		.accessibilityValue(shown)

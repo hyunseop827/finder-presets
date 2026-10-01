@@ -364,6 +364,8 @@ import DSStore
 		let changedNote = String(localized: "일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: 툴바의 \"기록\")")
 		#expect(stopped.message(folder: name, preset: "Icon88") == String(localized: "중단: manifest") + " · " + changedNote
 			+ " · " + String(localized: "Finder를 다시 시작하고 이 폴더를 다시 열었습니다."))
+		// A record that stopped partway may exist: the cleanup and the history follow it like a recorded one.
+		#expect(stopped.mayHaveRecorded && write.mayHaveRecorded)
 		let failedLaunch = String(localized: "Finder 재실행에 실패했습니다. 직접 Finder를 실행해 주세요.")
 		let stoppedDown = QuickApplyWrite(finder: .restarted(back: false), operation: nil, error: "manifest")
 		#expect(stoppedDown.message(folder: name, preset: "Icon88").hasSuffix(changedNote + " · " + failedLaunch))
@@ -620,7 +622,7 @@ import DSStore
 		}
 		#expect(finder.events == ["quit", "quit sees icon 88", "launch", "launch sees icon 88", "reopen sees icon 88", "settle"])
 		#expect(write.recheck == .changed && write.finder == .restarted(back: true) && write.changed && write.error == nil)
-		#expect(write.overwritten.isEmpty && !write.needsAttention)
+		#expect(write.overwritten.isEmpty && !write.needsAttention && write.mayHaveRecorded)
 		let name = "Folder", preset = "Icon88"
 		#expect(write.message(folder: name, preset: preset) == String(localized: "완료: \(name)에 \"\(preset)\"을(를) 적용했습니다.") + " "
 			+ String(localized: "Finder를 다시 시작하고 이 폴더를 다시 열었습니다."))
@@ -646,11 +648,12 @@ import DSStore
 			let write = AppModel.quickApplyRecheck(windowKnown: known, folder: m.folder, planAgain: m.planAgain, applier: m.applier, finder: finder) { finder.note("reopen") }
 			#expect(finder.events == ["quit", "launch", "reopen", "settle"])
 			#expect(write.recheck == .unchanged(windowKnown: known) && write.finder == .restarted(back: true))
-			#expect(write.operation == nil && !write.changed && write.error == nil && !write.needsAttention)
+			// Nothing recorded: no cleanup and no history read follow (`mayHaveRecorded`).
+			#expect(write.operation == nil && !write.changed && write.error == nil && !write.needsAttention && !write.mayHaveRecorded)
 			let message = write.message(folder: name, preset: preset)
 			#expect(message == (known
-				? String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
-				: String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")))
+				? String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
+				: String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")))
 			#expect(StatusBar.tone(status: message, working: false) == .success)
 		}
 		#expect(try m.store.list().isEmpty && Self.shows(m.folder) == "icon 88")
@@ -660,7 +663,7 @@ import DSStore
 		let down = AppModel.quickApplyRecheck(windowKnown: true, folder: m.folder, planAgain: m.planAgain, applier: m.applier, finder: gone) { gone.note("reopen") }
 		#expect(gone.events == ["quit", "launch"] && down.finder == .restarted(back: false) && down.needsAttention)
 		let downMessage = down.message(folder: name, preset: preset)
-		#expect(downMessage == String(localized: "빠른 적용: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같아 쓰지 않았습니다.") + " "
+		#expect(downMessage == String(localized: "빠른 적용: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같아 쓰지 않았습니다.") + " "
 			+ String(localized: "Finder 재실행에 실패했습니다. 직접 Finder를 실행해 주세요."))
 		#expect(StatusBar.tone(status: downMessage, working: false) == .warning)
 
@@ -677,7 +680,8 @@ import DSStore
 		let unreadable = AppModel.quickApplyRecheck(windowKnown: true, folder: m.folder, planAgain: m.planAgain, applier: m.applier, finder: broken) { broken.note("reopen") }
 		let path = FolderRule.normalize(m.folder.path)
 		#expect(broken.events == ["quit", "launch", "reopen", "settle"])
-		#expect(unreadable.recheck == .refused(.skipped(path, .unreadable)) && unreadable.operation == nil && unreadable.needsAttention)
+		#expect(unreadable.recheck == .refused(.skipped(path, .unreadable)) && unreadable.operation == nil && unreadable.needsAttention
+		        && !unreadable.mayHaveRecorded)
 		let refusedMessage = unreadable.message(folder: name, preset: preset)
 		#expect(refusedMessage == QuickApplyRefusal.skipped(path, .unreadable).message + " " + String(localized: "Finder를 다시 시작했습니다."))
 		#expect(StatusBar.tone(status: refusedMessage, working: false) != .success)

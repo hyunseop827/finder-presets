@@ -437,7 +437,7 @@ import DSStore
 		#expect(try Planner.readState(at: ParentStoreLocator.locate(a[0]), globals: env.globals).explicit.icon.iconSize == nil)
 	}
 
-	@Test func presetAndRuleStores() throws {
+	@Test func presetStore() throws {
 		let env = try Self.makeEnv()
 		defer { env.cleanUp() }
 		let ps = PresetStore(dirs: env.dirs)
@@ -459,73 +459,105 @@ import DSStore
 		#expect(listing.presets.map(\.id) == [p.id])
 		#expect(listing.unreadable.count == 2 && listing.unreadable.contains { $0.hasPrefix("broken.json: ") })
 		#expect(throws: PresetStoreError.self) { try ps.list() }
-		let rs = RuleStore(dirs: env.dirs)
-		let doc = RuleStore.Document(rules: [FolderRule(path: "~/Pictures", presetID: p.id)])
-		try rs.save(doc)
-		#expect(try rs.load() == doc)
-		#expect(doc.rules[0].path.hasPrefix("/"))
+		// A rule's path is stored absolute, "~" expanded.
+		#expect(FolderRule(path: "~/Pictures", presetID: p.id).path.hasPrefix("/"))
 	}
 
-	/// A rules.json written by an earlier version still has `defaultPresetID` and a rule `note`: it loads, and the next
-	/// save (as `finder-presets rule-set` does) keeps the rules and drops the unused keys.
-	@Test func legacyRulesFileStillLoads() throws {
-		let dirs = AppDirectories(root: FileManager.default.temporaryDirectory.appendingPathComponent("finder-presets-rules-\(UUID().uuidString)"))
-		defer { try? FileManager.default.removeItem(at: dirs.root) }
-		try dirs.ensure()
-		let legacy = #"""
-		{
-		  "defaultPresetID" : "0E2E0000-0000-4000-8000-0000000000D1",
-		  "rules" : [
-		    {
-		      "appliesToSubfolders" : false,
-		      "id" : "0E2E0000-0000-4000-8000-0000000000A1",
-		      "note" : "old note",
-		      "path" : "/finder-presets-legacy/Photos",
-		      "presetID" : "0E2E0000-0000-4000-8000-0000000000B1"
-		    },
-		    {
-		      "appliesToSubfolders" : true,
-		      "id" : "0E2E0000-0000-4000-8000-0000000000A2",
-		      "path" : "/finder-presets-legacy/Projects",
-		      "presetID" : "0E2E0000-0000-4000-8000-0000000000B2"
-		    }
-		  ]
-		}
-		"""#
-		try Data(legacy.utf8).write(to: dirs.rules)
-		let rs = RuleStore(dirs: dirs)
-		var doc = try rs.load()
-		#expect(doc.rules.map(\.path) == ["/finder-presets-legacy/Photos", "/finder-presets-legacy/Projects"])
-		#expect(doc.rules.map(\.appliesToSubfolders) == [false, true])
-		#expect(doc.rules.map(\.presetID.uuidString) == ["0E2E0000-0000-4000-8000-0000000000B1", "0E2E0000-0000-4000-8000-0000000000B2"])
-		#expect(doc.rules[0].id.uuidString == "0E2E0000-0000-4000-8000-0000000000A1")
-
-		doc.rules.removeAll { $0.path == "/finder-presets-legacy/Projects" }
-		try rs.save(doc)
-		#expect(try rs.load() == doc)
-		let saved = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: dirs.rules)) as? [String: Any])
-		let savedRules = try #require(saved["rules"] as? [[String: Any]])
-		#expect(Set(saved.keys) == ["rules"])
-		#expect(savedRules.map { Set($0.keys) } == [["appliesToSubfolders", "id", "path", "presetID"]])
+	/// Two presets with the same ID (a preset file copied in Finder keeps the ID inside it) never stop planning: the first
+	/// one wins.
+	@Test func plannerTakesTheFirstOfPresetsThatShareAnID() {
+		let first = Preset(name: "A", settings: ViewSettings(viewStyle: .list))
+		let copy = Preset(id: first.id, name: "A copy", settings: ViewSettings(viewStyle: .icon))
+		let planner = Planner(presets: [first, copy], resolver: RuleResolver(rules: [], defaultPresetID: first.id), globals: .factory)
+		#expect(planner.presets.count == 1 && planner.presets[first.id]?.name == "A")
 	}
 
-	@Test func retentionPolicy() throws {
+	/// A parent store that is read but cannot be written (its folder turned read-only after the plan): its folders are
+	/// recorded as failed — the backup made from what was read stays, nothing is left in the folder — and the next store
+	/// is written. The undo records a store it cannot write the same way, and backs up only a store it writes: one whose
+	/// folders are all already as before keeps no copy.
+	@Test func aStoreThatCannotBeWrittenIsRecordedAsFailed() throws {
 		let env = try Self.makeEnv()
-		defer { env.cleanUp() }
-		let ops = OperationStore(dirs: env.dirs)
-		let now = Date()
-		for i in 0..<5 {
-			// Finished operations: an unfinished one started a moment ago would count as in progress and be kept outside
-			// the limits (HistoryAndRetentionTests has the protection rules).
-			let started = now.addingTimeInterval(-Double(i) * 86400 * 10)
-			var op = FinderPresetsOperation(kind: .apply, startedAt: started, finishedAt: started, roots: [])
-			op.pinned = (i == 4)   // oldest is pinned
-			try ops.save(op)
+		let fm = FileManager.default
+		defer {
+			try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: env.root.path)
+			env.cleanUp()
 		}
-		let removed = try ops.applyRetention(policy: RetentionPolicy(maxCount: 2, maxAge: 25 * 86400), now: now).removed
-		let remaining = try ops.list()
-		#expect(removed.count == 2)
-		#expect(remaining.count == 3)
-		#expect(remaining.contains { $0.pinned })
+		let store = env.root.appendingPathComponent(".DS_Store")
+		try StoreEditor.write(try StoreEditor.apply(ViewSettings(viewStyle: .list), to: "A", in: DSStore(), bases: RecordBases()), to: store)
+		let original = try Data(contentsOf: store)
+		let originalA = try #require(try StoreEditor.managedRecords(at: store, key: "A"))
+		let preset = Preset(name: "Icon88", settings: ViewSettings(viewStyle: .icon, icon: IconViewSettings(iconSize: 88)))
+		let planner = Planner(presets: [preset], resolver: RuleResolver(rules: [], defaultPresetID: preset.id), globals: env.globals)
+		func plan(_ names: [String]) -> Plan {
+			let roots = names.map { env.root.appendingPathComponent($0) }
+			return planner.plan(scanned: FolderScanner(options: ScanOptions(maxDepth: 0)).scan(roots: roots), roots: roots)
+		}
+		let ops = OperationStore(dirs: env.dirs)
+		let applier = Applier(operations: ops, globals: env.globals)
+		func statuses(_ op: FinderPresetsOperation) -> [String] { op.entries.map { "\(URL(fileURLWithPath: $0.folderPath).lastPathComponent) \($0.status)" } }
+		func leftovers() throws -> [String] { try fm.contentsOfDirectory(atPath: env.root.path).filter { $0.hasSuffix(".tmp") } }
+		func lock(_ locked: Bool) throws { try fm.setAttributes([.posixPermissions: locked ? 0o555 : 0o755], ofItemAtPath: env.root.path) }
+
+		let three = plan(["A", "B", "A/A1"])
+		try lock(true)
+		guard !fm.isWritableFile(atPath: env.root.path) else { return }   // root can write anywhere
+		let op = try applier.apply(ApplyRequest(plan: three, presetName: preset.name))
+		#expect(statuses(op) == ["A failed", "B failed", "A1 changed"])
+		#expect(op.entries.filter { $0.status == .failed }.allSatisfy { $0.before == nil && $0.after == nil && $0.error != nil })
+		#expect(try Data(contentsOf: store) == original && leftovers().isEmpty)
+		let backup = try #require(op.backups.first { $0.storePath == store.path })
+		#expect(try Data(contentsOf: ops.directory(for: op.id).appendingPathComponent(try #require(backup.backupFile))) == original)
+		let saved = try ops.load(id: op.id)
+		#expect(saved.entries == op.entries && saved.backups == op.backups)
+
+		// Written once the folder can be written again; then its undo cannot write it.
+		try lock(false)
+		let two = try applier.apply(ApplyRequest(plan: plan(["A", "B"]), presetName: preset.name))
+		#expect(statuses(two) == ["A changed", "B changed"])
+		let applied = try Data(contentsOf: store)
+		try lock(true)
+		let failed = try UndoService(operations: ops).undo(two)
+		#expect(statuses(failed) == ["A failed", "B failed"] && failed.backups.map(\.storePath) == [store.path])
+		#expect(try Data(contentsOf: store) == applied && leftovers().isEmpty)
+		#expect(try ops.load(id: failed.id).entries == failed.entries)
+		try lock(false)
+		let undo = try UndoService(operations: ops).undo(two)
+		#expect(statuses(undo) == ["A changed", "B changed"] && undo.backups.count == 1)
+		#expect(try StoreEditor.managedRecords(at: store, key: "A") == originalA && StoreEditor.managedRecords(at: store, key: "B")?.isEmpty == true)
+		// Undone again: every folder is already as before, nothing is written and nothing backed up.
+		let again = try UndoService(operations: ops).undo(two)
+		#expect(statuses(again) == ["A skippedMatching", "B skippedMatching"] && again.backups.isEmpty)
+	}
+
+	/// A store's entries and backup are saved before the store is written: when that save fails (the operation's folder
+	/// turned read-only after its first save), the store is left as it was and the apply stops with the error — never a
+	/// written store the record does not know about.
+	@Test func aStoreIsWrittenOnlyOnceItsEntriesAreSaved() throws {
+		let env = try Self.makeEnv()
+		let fm = FileManager.default
+		let operations = env.dirs.operations
+		func operationFolders() -> [URL] { (try? FileManager.default.contentsOfDirectory(at: operations, includingPropertiesForKeys: nil)) ?? [] }
+		defer {
+			for folder in operationFolders() { try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+			env.cleanUp()
+		}
+		let preset = Preset(name: "Icon88", settings: ViewSettings(viewStyle: .icon, icon: IconViewSettings(iconSize: 88)))
+		let roots = [env.root.appendingPathComponent("A")]
+		let plan = Planner(presets: [preset], resolver: RuleResolver(rules: [], defaultPresetID: preset.id), globals: env.globals)
+			.plan(scanned: FolderScanner(options: ScanOptions(maxDepth: 0)).scan(roots: roots), roots: roots)
+		let store = env.root.appendingPathComponent(".DS_Store")
+		var thrown: (any Error)?
+		do {
+			_ = try Applier(operations: OperationStore(dirs: env.dirs), globals: env.globals).apply(ApplyRequest(plan: plan)) { _ in
+				let folders = (try? FileManager.default.contentsOfDirectory(at: operations, includingPropertiesForKeys: nil)) ?? []
+				for folder in folders { try? FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path) }
+			}
+		} catch {
+			thrown = error
+		}
+		guard operationFolders().allSatisfy({ !fm.isWritableFile(atPath: $0.path) }) else { return }   // root can write anywhere
+		#expect(operationFolders().count == 1 && thrown != nil)
+		#expect(!fm.fileExists(atPath: store.path))
 	}
 }

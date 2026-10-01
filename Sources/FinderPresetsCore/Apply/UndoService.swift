@@ -115,10 +115,12 @@ public struct UndoService: Sendable {
 				$0.status != .changed || restoredIndex[$0.folderPath] != nil || matchingIndex[$0.folderPath] != nil
 			}) else { continue }
 			let url = URL(fileURLWithPath: storePath)
+			// As they were before this store's restored entries (`Applier.apply` records the same way).
+			var recorded: (entries: [OperationEntry], restoredIndex: [String: Int], matchingIndex: [String: Int])?
+			var savedWithWrite = false
 			do {
-				let backup = try operations.backup(store: url, for: undoOp)
-				undoOp.backups.append(backup)
-				var store = try StoreEditor.read(url).store ?? DSStore()
+				let read = try StoreEditor.readContents(url)
+				var store = read.result.store ?? DSStore()
 				var restored: [OperationEntry] = []
 				for e in entries {
 					let current = StoreEditor.managedRecords(in: store, key: e.key, codes: codes)
@@ -168,7 +170,23 @@ public struct UndoService: Sendable {
 						                                    status: .positionsOnly))
 					}
 				}
+				// Only a store that is written is backed up (one whose folders were all skipped keeps no copy), and its entries
+				// are saved before the write, as in `Applier.apply`; a failed save or write takes them out again (below).
 				if !restored.isEmpty || !positions.isEmpty {
+					undoOp.backups.append(try operations.backup(store: url, contents: read.contents, for: undoOp))
+					recorded = (undoOp.entries, restoredIndex, matchingIndex)
+					for e in restored {
+						restoredIndex[e.folderPath] = undoOp.entries.count
+						undoOp.entries.append(e)
+					}
+					for e in positionsOnly {
+						matchingIndex[e.folderPath] = undoOp.entries.count
+						undoOp.entries.append(e)
+					}
+					for (folder, change) in positions {
+						if let i = restoredIndex[folder] ?? matchingIndex[folder] { undoOp.entries[i].iconPositions = change }
+					}
+					try operations.save(undoOp)
 					let createdByOriginalApply = op.backups.contains { $0.storePath == storePath && $0.backupFile == nil }
 					if createdByOriginalApply && store.records.isEmpty {
 						// The store did not exist before the apply and is empty again: leave no trace (it may already be gone).
@@ -176,19 +194,14 @@ public struct UndoService: Sendable {
 					} else {
 						try StoreEditor.write(store, to: url)
 					}
-				}
-				for e in restored {
-					restoredIndex[e.folderPath] = undoOp.entries.count
-					undoOp.entries.append(e)
-				}
-				for e in positionsOnly {
-					matchingIndex[e.folderPath] = undoOp.entries.count
-					undoOp.entries.append(e)
-				}
-				for (folder, change) in positions {
-					if let i = restoredIndex[folder] ?? matchingIndex[folder] { undoOp.entries[i].iconPositions = change }
+					savedWithWrite = true
 				}
 			} catch {
+				if let recorded {
+					undoOp.entries = recorded.entries
+					restoredIndex = recorded.restoredIndex
+					matchingIndex = recorded.matchingIndex
+				}
 				for e in entries {
 					undoOp.entries.append(OperationEntry(folderPath: e.folderPath, storePath: storePath, key: e.key, before: nil, after: nil, status: .failed, error: error.localizedDescription))
 				}
@@ -202,7 +215,7 @@ public struct UndoService: Sendable {
 					}
 				}
 			}
-			try operations.save(undoOp)
+			if !savedWithWrite { try operations.save(undoOp) }
 		}
 		undoOp.finishedAt = Date()
 		try operations.save(undoOp)

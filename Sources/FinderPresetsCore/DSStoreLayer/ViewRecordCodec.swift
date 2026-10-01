@@ -212,6 +212,14 @@ public enum ViewRecordCodec {
 		return d
 	}
 
+	/// The inverse of `dictForm(ofList:)`: a dict-form list plist (lsvp, `ListViewSettings`) in array form (lsvC,
+	/// `ExtendedListViewSettingsV2`), its columns ordered by their `index` (`arrayColumns(fromDict:)`).
+	static func arrayForm(ofList list: [String: Any]) -> [String: Any] {
+		var a = list
+		if let cols = list["columns"] as? [String: [String: Any]] { a["columns"] = arrayColumns(fromDict: cols) }
+		return a
+	}
+
 	/// Converts array-form columns (lsvC) to dict-form (lsvp) so both records stay in sync.
 	public static func dictColumns(fromArray array: [[String: Any]]) -> [String: [String: Any]] {
 		var out: [String: [String: Any]] = [:]

@@ -241,7 +241,7 @@ import DSStore
 		// 20, its divider 1 and its 10pt padding twice around a content of 123 (search row 18, "일반" 13, three 18pt rows
 		// 7pt apart 68, three 8pt gaps 24). The layout probe measures each drawing's content against the box it gets.
 		let tallestDrawing: CGFloat = 18 + 13 + 68 + 3 * 8
-		#expect(tallestDrawing == 123 && ShortcutGuideSheet.drawingMinHeight == 20 + 1 + 20 + tallestDrawing)
+		#expect(ShortcutGuideSheet.drawingMinHeight == 20 + 1 + 20 + tallestDrawing)
 		// The step's sentence gets four lines of `.callout` (16pt a line in both languages); the probe measures the
 		// sentence's own height against this slot, so a longer text cannot be cut off unnoticed.
 		#expect(ShortcutGuideSheet.textHeight >= 4 * 16)
@@ -262,6 +262,16 @@ import DSStore
 		#expect(HistorySheet.size.height - 145 >= 70 + HistorySheet.previewRowHeight + 8 + UILayout.actionRowHeight)
 	}
 
+	/// "시스템 전체에 적용…": disabled without a selected preset and for one whose values are all "유지" (which
+	/// `prepareGlobalApply` refuses), and the chip beside it says why.
+	@Test func systemApplyNeedsAPresetWithValues() {
+		let empty = Preset(name: "Empty", settings: ViewSettings()), list = Preset(name: "List", settings: ViewSettings(viewStyle: .list))
+		#expect(!SystemBar.canApply(nil) && !SystemBar.canApply(empty) && SystemBar.canApply(list))
+		#expect(PresetChip.explanation(nil) == String(localized: "왼쪽에서 프리셋을 선택하세요"))
+		#expect(PresetChip.explanation(empty) == String(localized: "적용할 프리셋: \(empty.name). 모든 값이 \"유지\"라 적용할 수 없습니다."))
+		#expect(PresetChip.explanation(list) == String(localized: "적용할 프리셋: \(list.name)"))
+	}
+
 	/// The summary grid: six items in reading order (보기 | 정렬, 아이콘 | 목록, 레이블 | 정보·미리보기); a value the preset
 	/// leaves alone reads "유지" and is dimmed. The options without a cell of their own are counted in their view's cell
 	/// ("+N"), and the tooltip / VoiceOver text names every option the preset sets.
@@ -276,7 +286,10 @@ import DSStore
 			list: ListViewSettings(sortColumn: .dateModified, sortAscending: false)))
 		#expect(icon.map(\.value) == ["아이콘", "종류", "48 / 10", "수정일 ↓", "오른쪽", "끔 / 켬"])
 		#expect(icon.allSatisfy { !$0.kept })
-		#expect(icon.map(\.long) == ["보기 방식", "정렬 기준", "아이콘 보기", "목록 보기", "레이블 위치", "항목 정보 / 미리보기"])
+		// The label at the bottom has the editor's and the preview's word, in the grid and in the details alike.
+		let bottom = ViewSettings(icon: IconViewSettings(labelOnBottom: true))
+		#expect(SettingsSummary.items(bottom)[4].value == "아래")
+		#expect(SettingsSummary.details(bottom).first == "아이콘 보기 · 레이블 위치: 아래")
 
 		// Only list options (no cell of their own): the "목록" cell counts them, the text names them all.
 		let listOnly = ViewSettings(list: ListViewSettings(textSize: 14, useRelativeDates: false))

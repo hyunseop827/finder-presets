@@ -71,6 +71,12 @@ enum LanguageChoice: String, CaseIterable, Identifiable, Sendable {
 		localization ?? Self.localization(for: system)
 	}
 
+	/// Whether a relaunch with this choice would show another language than this launch does (`current`:
+	/// `AppLanguage.code`): the Settings window's note and "앱 다시 시작".
+	func needsRelaunch(system: [String], current: String) -> Bool {
+		resultingLocalization(system: system) != current
+	}
+
 	/// The radio button's text: "시스템 설정 따름 (한국어)", "한국어", "English".
 	func title(system: [String]) -> String {
 		switch self {
@@ -94,11 +100,6 @@ struct LanguageSetting: Sendable {
 	/// Stores `choice`: the per-app list for a language, no key at all for "시스템 설정 따름".
 	func set(_ choice: LanguageChoice) {
 		write(choice.appleLanguages(system: systemLanguages()))
-	}
-
-	/// Whether a relaunch would show another language than this launch does (`current`: `AppLanguage.code`).
-	func needsRelaunch(current: String) -> Bool {
-		choice.resultingLocalization(system: systemLanguages()) != current
 	}
 
 	/// The app's own defaults domain (only its persistent domain: a `-AppleLanguages` argument of this launch is not a
@@ -199,7 +200,7 @@ struct LanguageSettingsView: View {
 	private var guide: ShortcutGuide { ShortcutGuide.shared }
 	private let becameActive = NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
 
-	private var pending: Bool { choice.resultingLocalization(system: system) != AppLanguage.code }
+	private var pending: Bool { choice.needsRelaunch(system: system, current: AppLanguage.code) }
 
 	/// Why "앱 다시 시작" cannot run now (`AppRelaunch.blocker`). Part of it (Finder running, a sheet still attached while
 	/// it closes) is not observable, so while a relaunch is pending the row below asks again every second; otherwise it

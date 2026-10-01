@@ -376,7 +376,6 @@ struct PresetPreview: Equatable {
 		var textSize: Double
 		var iconSide: Double
 		var showPreview: Bool
-		var dateFormat: DateFormat
 		/// "⋯" lines: rows skipped in the order before the next one.
 		var gaps: [CGRect] = []
 	}
@@ -439,11 +438,6 @@ struct PresetPreview: Equatable {
 	var summary: String
 
 	// MARK: Making
-
-	static func make(settings: ViewSettings, globals: GlobalDefaults, locale: Locale, now: Date,
-	                 calendar: Calendar = .current, measure: (String, Double) -> Double = PreviewText.estimate) -> PresetPreview {
-		make(settings: settings, defaults: PreviewDefaults(globals), locale: locale, now: now, calendar: calendar, measure: measure)
-	}
 
 	/// `locale`: the app's language (dates, numbers, month names); the texts themselves come from the app's tables.
 	/// `calendar`: its time zone decides "today". `measure`: text width (see `PreviewText`).
@@ -1076,7 +1070,7 @@ struct PresetPreview: Equatable {
 		let laid = layOut(pick(count: flat.count, visible: { needs([flat[$0].sample]) }, any: { needs([flat[$0].sample]) },
 		                       fits: { layOut($0).bottom <= size.height + 0.5 }))
 		return ListTable(columns: columns, rows: laid.rows, headers: laid.headers, headerHeight: headerHeight, rowHeight: rowHeight,
-		                 textSize: text, iconSide: iconSide, showPreview: r.list.showIconPreview ?? true, dateFormat: chosen.0, gaps: laid.gaps)
+		                 textSize: text, iconSide: iconSide, showPreview: r.list.showIconPreview ?? true, gaps: laid.gaps)
 	}
 
 	// MARK: Column and gallery view

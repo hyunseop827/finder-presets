@@ -139,6 +139,13 @@ enum UndoPhase: Equatable {
 	case confirm(PendingUndo)
 	case running(PendingUndo)
 	case result(UndoOutcome)
+
+	/// A confirmation is being read, for whichever record: every "되돌리기…" waits for it, not only the selected record's
+	/// (`prepareUndo` refuses another one meanwhile, and the confirmation that comes is the first record's).
+	var isPreparing: Bool {
+		if case .preparing = self { return true }
+		return false
+	}
 }
 
 /// Why the app does not undo an operation.
@@ -390,7 +397,7 @@ extension AppModel {
 		// The development hooks never restart Finder: they prepare a global undo, they never carry it out.
 		if pending.isGlobal && (SelfTest.isRequested || LayoutProbe.isRequested) {
 			undoPhase = .idle
-			historyNotice = String(localized: "셀프테스트와 레이아웃 점검은 Finder 기본 보기를 되돌리지 않습니다.")
+			historyNotice = "셀프테스트와 레이아웃 점검은 Finder 기본 보기를 되돌리지 않습니다."   // l10n-exempt: debug builds only
 			return
 		}
 		#endif

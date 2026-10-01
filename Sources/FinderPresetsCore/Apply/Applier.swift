@@ -12,7 +12,7 @@ public struct ApplyRequest: Sendable {
 	}
 }
 
-/// Executes a plan: per parent .DS_Store → backup → merge managed records of each target child → atomic write.
+/// Executes a plan: per parent .DS_Store → merge managed records of each target child → backup, entries saved → atomic write.
 /// Failures are recorded per parent group; other groups continue (partial success). A folder planned with
 /// `resetsIconPositions` also loses the icon positions in its own `.DS_Store` (backed up and written the same way); a
 /// failure there never fails its view change (`OperationEntry.iconPositionsError`). A folder planned
@@ -51,10 +51,12 @@ public struct Applier: Sendable {
 			let resetting = (resets[storePath] ?? []).filter { r in changedIndex[r.folder.path] != nil || entries.contains { $0.folder == r.folder } }
 			guard !entries.isEmpty || !resetting.isEmpty || !positionsOnly.isEmpty else { continue }
 			progress?("\(storeURL.deletingLastPathComponent().path)")
+			var recorded: (entries: [OperationEntry], changedIndex: [String: Int])?   // as they were before this store's entries
+			var savedWithWrite = false
 			do {
-				let read = try StoreEditor.read(storeURL)
-				let absent = read.store == nil
-				var store = read.store ?? DSStore()
+				let read = try StoreEditor.readContents(storeURL)
+				let absent = read.result.store == nil
+				var store = read.result.store ?? DSStore()
 				var pending: [(PlanEntry, ManagedRecordSet?)] = []
 				for e in entries {
 					guard let loc = e.location, let target = e.target else { continue }
@@ -72,14 +74,17 @@ public struct Applier: Sendable {
 				}
 				// Nothing to write (the positions were gone by now): no backup either.
 				guard !pending.isEmpty || !positions.isEmpty else { continue }
-				op.backups.append(try operations.backup(store: storeURL, for: op))
-				try StoreEditor.write(store, to: storeURL)
-				let written = try DSStore.read(from: storeURL)
+				op.backups.append(try operations.backup(store: storeURL, contents: read.contents, for: op))
+				// The entries and the backup are saved before the write, so a crash or a failed save never leaves a written
+				// store the undo cannot reach. A store recorded but never written still holds `before`: its undo finds the
+				// folders already restored. When the save or the write fails, the entries are taken out again (below).
+				recorded = (op.entries, changedIndex)
+				let first = op.entries.count
 				for (e, before) in pending {
 					let loc = e.location!
 					changedIndex[e.folder.path] = op.entries.count
 					op.entries.append(OperationEntry(folderPath: e.folder.path, storePath: storePath, key: loc.key,
-					                                 before: before, after: StoreEditor.managedRecords(in: written, key: loc.key), status: .changed))
+					                                 before: before, after: StoreEditor.managedRecords(in: store, key: loc.key), status: .changed))
 				}
 				for (folder, change) in positions {
 					if let i = changedIndex[folder] { op.entries[i].iconPositions = change }
@@ -89,7 +94,18 @@ public struct Applier: Sendable {
 					op.entries.append(OperationEntry(folderPath: p.folder.path, storePath: loc.storeURL.path, key: loc.key,
 					                                 before: nil, after: nil, status: .positionsOnly, iconPositions: change))
 				}
+				try operations.save(op)
+				let written = try StoreEditor.write(store, to: storeURL)
+				// `after` as the written file holds it (saved with the next store, or at the end).
+				for i in first..<op.entries.count where op.entries[i].status == .changed {
+					op.entries[i].after = StoreEditor.managedRecords(in: written, key: op.entries[i].key)
+				}
+				savedWithWrite = true
 			} catch {
+				if let recorded {
+					op.entries = recorded.entries
+					changedIndex = recorded.changedIndex
+				}
 				for e in entries {
 					op.entries.append(OperationEntry(folderPath: e.folder.path, storePath: storePath, key: e.location?.key ?? e.folder.lastPathComponent,
 					                                 before: nil, after: nil, status: .failed, error: error.localizedDescription))
@@ -103,7 +119,7 @@ public struct Applier: Sendable {
 					                                 before: nil, after: nil, status: .failed, error: error.localizedDescription))
 				}
 			}
-			try operations.save(op)
+			if !savedWithWrite { try operations.save(op) }
 		}
 		for e in request.plan.entries where e.category == .alreadyMatching {
 			op.entries.append(OperationEntry(folderPath: e.folder.path, storePath: e.location?.storeURL.path ?? "", key: e.location?.key ?? "", before: nil, after: nil, status: .skippedMatching))
@@ -188,17 +204,17 @@ public struct Applier: Sendable {
 			let url = URL(fileURLWithPath: storePath)
 			let group = byStore[storePath] ?? []
 			do {
-				var store = try StoreEditor.read(url).store ?? DSStore()
+				let read = try StoreEditor.readContents(url)
+				var store = read.result.store ?? DSStore()
 				for e in group { store = StoreEditor.restore(e.after!, for: e.key, in: store, codes: codes) }
 				let copies = (op.backups + added).filter { $0.storePath == storePath }.count
-				added.append(try operations.backup(store: url, for: op, suffix: "-\(copies + 1)"))
+				added.append(try operations.backup(store: url, contents: read.contents, for: op, suffix: "-\(copies + 1)"))
 				let written: DSStore
 				if store.records.isEmpty {
 					if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
 					written = store
 				} else {
-					try StoreEditor.write(store, to: url)
-					written = try DSStore.read(from: url)
+					written = try StoreEditor.write(store, to: url)
 				}
 				for e in group { afters[e.folderPath] = StoreEditor.managedRecords(in: written, key: e.key, codes: codes) }
 			} catch {

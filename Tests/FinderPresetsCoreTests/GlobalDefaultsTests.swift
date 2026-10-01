@@ -41,8 +41,13 @@ import Testing
 		let domain: String
 		var quitSucceeds = true
 		var launchSucceeds = true
+		/// Runs at each quit that succeeds, after it is recorded (Finder writing its defaults from memory as it quits).
+		var onQuit: (() -> Void)?
 		/// Runs at each launch, after it is recorded (e.g. Finder writing other values back).
 		var onLaunch: (() -> Void)?
+		/// With `onSettle` set, each settle is recorded as "settle" and runs it (Finder writing as it starts, or going away:
+		/// `crash`); without it the fake settles at once and records nothing.
+		var onSettle: (() -> Void)?
 		private var log: [String] = []
 		private var running = true
 		private let lock = NSLock()
@@ -61,6 +66,7 @@ import Testing
 		func quit() -> Bool {
 			record("quit")
 			lock.lock(); if quitSucceeds { running = false }; lock.unlock()
+			if quitSucceeds { onQuit?() }
 			return quitSucceeds
 		}
 		func launch() -> Bool {
@@ -69,6 +75,13 @@ import Testing
 			lock.lock(); running = launchSucceeds; lock.unlock()
 			return launchSucceeds
 		}
+		func settle() {
+			guard let onSettle else { return }
+			lock.lock(); log.append("settle"); lock.unlock()
+			onSettle()
+		}
+		/// Finder going away by itself.
+		func crash() { lock.lock(); log.append("crash"); running = false; lock.unlock() }
 
 		/// Finder's windows (`FinderWindows`): with `windows` set, the read is recorded as "windows" and `reopen` as
 		/// "reopen:A,B" (the names in the order asked); without it the fake has none and records nothing about them.
@@ -205,6 +218,29 @@ import Testing
 		#expect((b["ExtendedListViewSettingsV2"] as? [String: Any])?["textSize"] as? Double == 14)
 	}
 
+	/// The reader follows the same rule: with only `ListViewSettings`, Finder's list options (what a folder without records
+	/// shows, and what a new `lsvC` starts from) are taken from it, not left at the factory values. With both sections the
+	/// array-form one is read, as before.
+	@Test func readerTakesTheListOptionsFromTheOnlyListSection() throws {
+		let dict: [String: Any] = ["textSize": "11", "iconSize": "32", "sortColumn": "kind", "columns": [
+			"kind": ["index": "1", "width": "120", "ascending": "0", "visible": "1"],
+			"name": ["index": "0", "width": "400", "ascending": "1", "visible": "1"]]]
+		let onlyDict = GlobalDefaults(viewStyle: "Nlsv", standardViewSettings: ["ListViewSettings": dict])
+		#expect(onlyDict.preferredViewStyle == .list)
+		let list = onlyDict.effectiveSettings.list
+		#expect(list.textSize == 11 && list.iconSize == 32 && list.sortColumn == .kind && list.sortAscending == false)
+		#expect(list.useRelativeDates == true)   // a key the section does not hold keeps its factory value
+		let columns = try #require(onlyDict.recordBases.listArray["columns"] as? [[String: Any]])
+		#expect(columns.map { $0["identifier"] as? String } == ["name", "kind"] && columns[0]["width"] as? Int == 400)
+		// What the writer decodes from the same section (`GlobalDefaultsWriter.decode`), filled with the factory values.
+		let decoded = GlobalDefaultsWriter.decode(viewStyle: "Nlsv", standardViewSettings: ["ListViewSettings": dict])
+		#expect(onlyDict.effectiveSettings == decoded.filling(from: GlobalDefaults.factory.effectiveSettings))
+
+		let both = GlobalDefaults(viewStyle: nil, standardViewSettings: ["ListViewSettings": dict, "ExtendedListViewSettingsV2": ["textSize": "14"]])
+		#expect(both.effectiveSettings.list.textSize == 14 && both.effectiveSettings.list.sortColumn == .name)
+		#expect(GlobalDefaults(viewStyle: nil, standardViewSettings: nil).effectiveSettings == GlobalDefaults.factory.effectiveSettings)
+	}
+
 	// MARK: (b) write / read back / restore in a test domain
 
 	@Test func writesReadsBackAndRestoresInATestDomain() throws {
@@ -339,6 +375,44 @@ import Testing
 		#expect(normalized.presetSnapshot == ViewSettings(viewStyle: .list))   // the dangling direction is dropped, not verified
 		#expect(finder.events == ["quit:icnv", "launch:Nlsv"])
 		_ = try applier.undo(normalized)
+	}
+
+	/// Finder writes its defaults from memory as it quits. What it wrote is recorded as the "before" (`global-before.json`
+	/// saved again) and kept where the preset sets nothing, so an undo puts back what Finder last had — not the values
+	/// read before the quit. The same for an undo: what Finder wrote as it quit for it comes back with the redo.
+	@Test func applierRecordsWhatFinderWritesAsItQuits() throws {
+		let domain = TestDomain()
+		defer { domain.cleanup() }
+		try GlobalDefaultsWriter.write(viewStyle: "icnv", standardViewSettings: ["IconViewSettings": ["iconSize": 64.0], "GalleryViewSettings": ["arrangeBy": "name"]],
+		                               domain: domain.name)
+		let appDir = Self.tempDir("finder-presets-global-quit")
+		defer { try? FileManager.default.removeItem(at: appDir) }
+		let ops = OperationStore(dirs: AppDirectories(root: appDir))
+		let finder = FakeFinder(domain: domain.name)
+		let applier = GlobalApplier(operations: ops, domain: domain.name, finder: finder)
+
+		let quitValues: [String: Any] = ["IconViewSettings": ["iconSize": 32.0], "GalleryViewSettings": ["arrangeBy": "name"]]
+		finder.onQuit = { try? GlobalDefaultsWriter.write(viewStyle: "Nlsv", standardViewSettings: quitValues, domain: domain.name) }
+		let op = try applier.apply(ViewSettings(viewStyle: .column), presetName: "C")
+		#expect(finder.events == ["quit:icnv", "launch:clmv"])
+		let before = try ops.loadGlobalSnapshot(try #require(op.globalSnapshotFile), for: op)
+		#expect(before.preferredViewStyle == "Nlsv" && Self.same(before.standardViewSettingsDictionary, quitValues))
+		#expect(domain.style() == "clmv" && Self.same(domain.svs(), quitValues))   // the icon size Finder wrote is kept
+
+		// The undo: Finder writes yet other values as it quits; the apply's "before" comes back all the same.
+		let undoQuitValues: [String: Any] = ["IconViewSettings": ["iconSize": 48.0]]
+		finder.onQuit = { try? GlobalDefaultsWriter.write(viewStyle: "glyv", standardViewSettings: undoQuitValues, domain: domain.name) }
+		finder.reset()
+		let undo = try applier.undo(op)
+		#expect(finder.events == ["quit:clmv", "launch:Nlsv"])
+		#expect(domain.style() == "Nlsv" && Self.same(domain.svs(), quitValues))
+		let undoBefore = try ops.loadGlobalSnapshot(try #require(undo.globalSnapshotFile), for: undo)
+		#expect(undoBefore.preferredViewStyle == "glyv" && Self.same(undoBefore.standardViewSettingsDictionary, undoQuitValues))
+
+		// Undoing the undo puts back what Finder wrote as it quit for the undo.
+		finder.onQuit = nil
+		_ = try applier.undo(undo)
+		#expect(domain.style() == "glyv" && Self.same(domain.svs(), undoQuitValues))
 	}
 
 	/// The app writes the home folders' `.DS_Store` in the same Finder-down window (a running Finder would write

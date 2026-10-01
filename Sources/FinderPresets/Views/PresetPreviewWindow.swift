@@ -92,9 +92,11 @@ final class PresetPreviewController {
 	}
 
 	var isEditing: Bool { tracker != nil }
+	#if DEBUG
 	/// The window on screen (for the layout probe and the self-test).
 	var window: NSPanel? { panel }
 	var isVisible: Bool { panel?.isVisible == true }
+	#endif
 
 	var title: String {
 		let name = tracker?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

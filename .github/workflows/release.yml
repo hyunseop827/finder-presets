@@ -60,8 +60,11 @@ jobs:
         run: |
           set -u
           fail() { echo "::error::$*"; exit 1; }
-          # Files that make up the app: a change here after a release needs a new version.
-          app_inputs=(Sources Resources Package.swift Package.resolved scripts/build-app.sh scripts/make-icon.swift)
+          # Files that make up the app: a change here after a release needs a new version. The dev CLI and the debug-only
+          # harnesses (#if DEBUG) are not in the release build, so a change to them alone needs none.
+          app_inputs=(Sources Resources Package.swift Package.resolved scripts/build-app.sh scripts/make-icon.swift
+            ':(exclude)Sources/finder-presets' ':(exclude)Sources/FinderPresets/SelfTest.swift'
+            ':(exclude)Sources/FinderPresets/LayoutProbe.swift')
           notes=.github/release-notes.md
 
           version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
@@ -130,7 +133,7 @@ jobs:
               *) fail "$tag 와 지금 커밋을 비교하지 못했습니다." ;;
             esac
             publish=false
-            # A re-run of the commit that published it checks the download again (menu-pulse does the same).
+            # A re-run of the commit that published it checks the download again.
             if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then verify=false; fi
             echo "$tag 는 이미 릴리스되었고 그 뒤로 앱은 바뀌지 않았습니다. 새로 올릴 것이 없습니다."
           elif [[ -n "$tag_commit" && "$tag_commit" != "$GITHUB_SHA" ]]; then

@@ -3,6 +3,6 @@
 "NSDesktopFolderUsageDescription" = "데스크탑 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
 "NSDocumentsFolderUsageDescription" = "문서 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
 "NSDownloadsFolderUsageDescription" = "다운로드 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
-"NSRemovableVolumesUsageDescription" = "외장 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
-"NSNetworkVolumesUsageDescription" = "네트워크 볼륨 폴더의 Finder 보기 설정을 읽고 쓰기 위해 필요합니다.";
+"NSRemovableVolumesUsageDescription" = "외장 볼륨 폴더의 Finder 보기 설정을 읽기 위해 필요합니다.";
+"NSNetworkVolumesUsageDescription" = "네트워크 볼륨 폴더의 Finder 보기 설정을 읽기 위해 필요합니다.";
 "NSFileProviderDomainUsageDescription" = "클라우드 폴더의 Finder 보기 설정을 읽기 위해 필요합니다.";

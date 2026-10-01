@@ -16,9 +16,10 @@ import FinderPresetsCore
 ///     leading and trailing spaces; every English plural formats for one and for many.
 /// Also: the status line's tone words agree in both languages for every text, and Info.plist's localizations.
 @MainActor @Suite struct LocalizationTests {
-	private static let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-	private static let resources = repository.appendingPathComponent("Resources")
-	private static let appSources = repository.appendingPathComponent("Sources/FinderPresets")
+	// Nonisolated: the compile in `extract()` reads them off the main actor.
+	private nonisolated static let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+	private nonisolated static let resources = repository.appendingPathComponent("Resources")
+	private nonisolated static let appSources = repository.appendingPathComponent("Sources/FinderPresets")
 
 	// MARK: Tables
 
@@ -229,8 +230,9 @@ import FinderPresetsCore
 	}
 
 	/// Compiles the app's sources once more (debug, like `swift test`) with `-emit-localized-strings` into a temporary
-	/// folder, against the modules this test was built with, and reads the `.stringsdata` files.
-	static func extract() throws -> Extracted {
+	/// folder, against the modules this test was built with, and reads the `.stringsdata` files. Off the main actor: the
+	/// compile takes half a minute, and the app's other tests, most of them on the main actor, go on meanwhile.
+	@concurrent static func extract() async throws -> Extracted {
 		final class Marker {}
 		let products = Bundle(for: Marker.self).bundleURL.deletingLastPathComponent()
 		let fm = FileManager.default
@@ -248,8 +250,9 @@ import FinderPresetsCore
 		#else
 		let arch = "x86_64"
 		#endif
+		let sdk = try await run(["--show-sdk-path"]).trimmingCharacters(in: .whitespacesAndNewlines)
 		var arguments = ["swiftc", "-c", "-parse-as-library", "-D", "DEBUG", "-swift-version", "6", "-module-name", "FinderPresets",
-		                 "-target", "\(arch)-apple-macosx14.0", "-sdk", try run(["--show-sdk-path"]).trimmingCharacters(in: .whitespacesAndNewlines),
+		                 "-target", "\(arch)-apple-macosx14.0", "-sdk", sdk,
 		                 "-I", modules.path, "-wmo", "-Onone", "-o", out.appendingPathComponent("app.o").path,
 		                 "-emit-localized-strings", "-emit-localized-strings-path", out.path]
 		// Command Line Tools only (scripts/toolchain.sh): SwiftUI's macro plugin comes from Xcode.
@@ -260,7 +263,7 @@ import FinderPresetsCore
 				arguments += ["-plugin-path", plugins]
 			}
 		}
-		_ = try run(arguments + sources)
+		_ = try await run(arguments + sources)
 		var extracted = Extracted()
 		for file in try fm.contentsOfDirectory(at: out, includingPropertiesForKeys: nil) where file.pathExtension == "stringsdata" {
 			let json = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
@@ -283,7 +286,7 @@ import FinderPresetsCore
 	}
 
 	/// Runs `xcrun <arguments>` (the toolchain scripts/test.sh chose, through DEVELOPER_DIR) and returns its output.
-	static func run(_ arguments: [String]) throws -> String {
+	@concurrent static func run(_ arguments: [String]) async throws -> String {
 		let process = Process()
 		process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
 		process.arguments = arguments
@@ -291,9 +294,15 @@ import FinderPresetsCore
 		process.standardOutput = output
 		process.standardError = errors
 		try process.run()
-		let out = output.fileHandleForReading.readDataToEndOfFile()
-		let err = errors.fileHandleForReading.readDataToEndOfFile()
-		process.waitUntilExit()
+		// Both pipes are read at once: swiftc writes its diagnostics to stderr, and once that pipe is full (64 KB) it waits
+		// for a reader before it ever closes stdout. Each read blocks a thread of its own, outside the tasks' pool
+		// (`FileHandle.bytes` would not do: it reads every handle of the process on one shared queue, one after the other).
+		func collect(_ handle: FileHandle) async -> Data {
+			await withCheckedContinuation { done in DispatchQueue.global().async { done.resume(returning: handle.readDataToEndOfFile()) } }
+		}
+		async let outData = collect(output.fileHandleForReading), errData = collect(errors.fileHandleForReading)
+		let (out, err) = await (outData, errData)
+		process.waitUntilExit()   // both pipes are closed: it has ended or is about to
 		guard process.terminationStatus == 0 else {
 			throw Failure("xcrun \(arguments.prefix(3).joined(separator: " ")) … failed (\(process.terminationStatus)): "
 				+ String(decoding: err, as: UTF8.self).split(separator: "\n").filter { $0.contains("error") }.prefix(10).joined(separator: "\n"))
@@ -301,13 +310,21 @@ import FinderPresetsCore
 		return String(decoding: out, as: UTF8.self)
 	}
 
-	static func swiftFiles(in folder: URL) throws -> [URL] {
+	nonisolated static func swiftFiles(in folder: URL) throws -> [URL] {
 		let items = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? []
 		return items.filter { $0.pathExtension == "swift" }.sorted { $0.path < $1.path }
 	}
 
-	@Test func everyExtractedTextIsTranslatedAndEveryKoreanLiteralIsLocalized() throws {
-		let extracted = try Self.extract()
+	/// `run` on a tool that fills stderr before it writes to stdout, the way a compile that fails in every file would: it
+	/// returns stdout instead of waiting for ever, and a failure carries the tool's error lines.
+	@Test(.timeLimit(.minutes(1))) func runReadsBothPipesAtOnce() async throws {
+		#expect(try await Self.run(["sh", "-c", "head -c 300000 /dev/zero >&2; echo done"]) == "done\n")
+		let failure = await #expect(throws: Failure.self) { try await Self.run(["sh", "-c", "echo 'error: no' >&2; exit 3"]) }
+		#expect(failure?.description.hasSuffix("failed (3): error: no") == true, "\(failure.map(String.init(describing:)) ?? "")")
+	}
+
+	@Test func everyExtractedTextIsTranslatedAndEveryKoreanLiteralIsLocalized() async throws {
+		let extracted = try await Self.extract()
 		let ko = try Self.strings("ko", "Localizable"), en = try Self.strings("en", "Localizable"), plural = try Self.plurals()
 		let korean = extracted.keys.filter(Self.hasHangul)
 		#expect(korean.count > 100)

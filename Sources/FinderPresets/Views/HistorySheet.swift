@@ -466,7 +466,10 @@ struct HistorySheet: View {
 				}
 				Spacer(minLength: 8)
 				if browsing || isResult {
+					// Esc closes the sheet (a sheet without a `.cancelAction` does not close on Esc); the confirmation's
+					// "취소" has it while this button is not shown.
 					Button(String(localized: "닫기")) { model.closeHistory() }
+						.keyboardShortcut(.cancelAction)
 						.accessibilityIdentifier("historyClose")
 				}
 			}
@@ -627,6 +630,7 @@ private struct HistoryBrowser: View {
 }
 
 private struct HistoryRow: View {
+	@Environment(\.colorSchemeContrast) private var contrast
 	let item: OperationOverview
 
 	var body: some View {
@@ -669,7 +673,7 @@ private struct HistoryRow: View {
 					.lineLimit(1)
 					.padding(.horizontal, 6)
 					.frame(height: 16)
-					.overlay(Capsule().strokeBorder(OnSelection(badge.warning ? AnyShapeStyle(Theme.warning) : AnyShapeStyle(Theme.cardStroke),
+					.overlay(Capsule().strokeBorder(OnSelection(badge.warning ? AnyShapeStyle(Theme.warning) : AnyShapeStyle(Theme.cardStroke(contrast)),
 					                                            selected: Color.white.opacity(0.6))))
 					.fixedSize()
 			}
@@ -698,7 +702,8 @@ private struct HistoryRow: View {
 	}
 }
 
-/// The selected record: when, where, what it changed, whether it can be undone; "되돌리기…" and "고정".
+/// The selected record: when, where, what it changed, whether it can be undone; "되돌리기…" and "지우기…" (pinning is
+/// in the bottom row's "다른 동작" menu, `MoreMenu`).
 private struct HistoryDetail: View {
 	@Environment(AppModel.self) private var model
 	let item: OperationOverview?
@@ -834,7 +839,7 @@ private struct HistoryDetail: View {
 			HStack(spacing: 8) {
 				Button { model.prepareUndo(o.id) } label: { Label(String(localized: "되돌리기…"), systemImage: "arrow.uturn.backward") }
 					.buttonStyle(.borderedProminent)
-					.disabled(!o.canUndo || inProgress || model.isWorking || preparing)
+					.disabled(!o.canUndo || inProgress || model.isWorking || model.undoPhase.isPreparing)
 					.help(HistoryText.undoHelp(o, busy: model.isWorking))
 					.accessibilityIdentifier("historyUndo")
 				if preparing { ProgressView().controlSize(.small) }

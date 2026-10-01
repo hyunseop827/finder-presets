@@ -2,7 +2,8 @@ import SwiftUI
 import FinderPresetsCore
 
 /// The window: the two columns, the one-line whole-system bar and the status bar. Every sheet, alert and confirmation
-/// lives here, except what the history sheet asks itself (its undo confirmation and "Finder를 다시 시작할까요?").
+/// lives here, except the preset list's rename alert (PresetPane) and what the history sheet asks itself (its undo
+/// confirmation, "지우기…" and "Finder를 다시 시작할까요?").
 struct MainView: View {
 	@Environment(AppModel.self) private var model
 	@Environment(\.openWindow) private var openWindow

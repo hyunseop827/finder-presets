@@ -131,6 +131,22 @@
 			<string>%lld home folders</string>
 		</dict>
 	</dict>
+	<key>홈 폴더 %lld개 실패</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@folders@ failed</string>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld home folder</string>
+			<key>other</key>
+			<string>%lld home folders</string>
+		</dict>
+	</dict>
 	<key>Finder 기본 보기는 바꾸지 못했습니다: %@
 
 홈 폴더 %lld개는 이미 변경됐습니다. 되돌리려면 툴바의 "기록"에서 이 작업을 고르세요.</key>
@@ -199,10 +215,10 @@
 			<string>%lld folders</string>
 		</dict>
 	</dict>
-	<key>Finder의 폴더로 프리셋 %lld개를 만들었습니다: %@</key>
+	<key>폴더로 프리셋 %lld개를 만들었습니다: %@</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
-		<string>Made %#@presets@ from Finder folders: %@</string>
+		<string>Made %#@presets@ from folders: %@</string>
 		<key>presets</key>
 		<dict>
 			<key>NSStringFormatSpecTypeKey</key>

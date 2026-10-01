@@ -4,6 +4,6 @@
 "NSDesktopFolderUsageDescription" = "Needed to read and write the Finder view settings of the Desktop folder.";
 "NSDocumentsFolderUsageDescription" = "Needed to read and write the Finder view settings of the Documents folder.";
 "NSDownloadsFolderUsageDescription" = "Needed to read and write the Finder view settings of the Downloads folder.";
-"NSRemovableVolumesUsageDescription" = "Needed to read and write the Finder view settings of folders on external volumes.";
-"NSNetworkVolumesUsageDescription" = "Needed to read and write the Finder view settings of folders on network volumes.";
+"NSRemovableVolumesUsageDescription" = "Needed to read the Finder view settings of folders on external volumes.";
+"NSNetworkVolumesUsageDescription" = "Needed to read the Finder view settings of folders on network volumes.";
 "NSFileProviderDomainUsageDescription" = "Needed to read the Finder view settings of cloud folders.";

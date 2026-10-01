@@ -413,6 +413,13 @@ import DSStore
 		#expect(AppModel.chosenHistoryRecords([a], in: [b], shownBefore: [a, b]) == [b])
 	}
 
+	/// Every record's "되돌리기…" waits while a confirmation is being read, also when another record is selected meanwhile:
+	/// `prepareUndo` would refuse it without a word, and the confirmation that comes is the first record's.
+	@Test func undoWaitsWhileAnyConfirmationIsRead() {
+		#expect(UndoPhase.preparing(UUID()).isPreparing)
+		#expect(!UndoPhase.idle.isPreparing)
+	}
+
 	/// The two records of one "시스템 전체에 적용": the home folders are written while Finder is quit, i.e. between the
 	/// global record's start and finish, with the same preset.
 	@Test func systemApplyPairs() {

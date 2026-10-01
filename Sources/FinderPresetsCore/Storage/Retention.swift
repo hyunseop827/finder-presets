@@ -33,7 +33,6 @@ public struct RetentionPlan: Sendable, Equatable {
 	}
 
 	public let policy: RetentionPolicy
-	public let now: Date
 	/// The `operations` folder the plan was made for.
 	public let operationsDirectory: URL
 	/// Every readable operation, newest first.
@@ -54,7 +53,6 @@ public struct RetentionResult: Sendable, Equatable {
 		public let message: String
 	}
 
-	public let plan: RetentionPlan
 	/// Operations whose directory (manifest and backups) was deleted.
 	public let removed: [UUID]
 	/// Planned for removal but left alone: changed on disk since the plan (pinned, finished, rewritten), gone, still in
@@ -122,7 +120,7 @@ extension OperationStore {
 			RetentionPlan.Item(operation: op, overview: history.overview(of: op), bytes: bytes[op.id] ?? 0,
 			                   reasons: reasons[op.id] ?? [], protection: protection[op.id])
 		}
-		return RetentionPlan(policy: policy, now: now, operationsDirectory: dirs.operations, items: items, unreadable: listing.unreadable)
+		return RetentionPlan(policy: policy, operationsDirectory: dirs.operations, items: items, unreadable: listing.unreadable)
 	}
 
 	/// Deletes the directories (manifest, backups, global snapshot) of the operations `plan` removes — and only those.
@@ -147,7 +145,7 @@ extension OperationStore {
 				failed.append(RetentionResult.Failure(id: item.id, message: error.localizedDescription))
 			}
 		}
-		return RetentionResult(plan: plan, removed: removed, skipped: skipped, failed: failed)
+		return RetentionResult(removed: removed, skipped: skipped, failed: failed)
 	}
 
 	/// Plans and applies the policy in one step (`retentionPlan(policy:now:)` has the rules). The app calls it once at

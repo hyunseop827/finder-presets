@@ -219,27 +219,6 @@ import Testing
 		#expect(finder.events == ["windows", "quit:clmv", "windows", "quit:clmv"])
 	}
 
-	/// A lifecycle that records its calls, the settle included (`onSettle` runs while it settles: Finder writing as it
-	/// starts, or going away), with the windows it answers.
-	final class SettlingFinder: FinderLifecycle, @unchecked Sendable {
-		var launchSucceeds = true
-		var onSettle: (() -> Void)?
-		var windows: [URL] = []
-		private(set) var events: [String] = []
-		private var running = true
-		var isRunning: Bool { running }
-		func quit() -> Bool { events.append("quit"); running = false; return true }
-		func launch() -> Bool { events.append("launch"); running = launchSucceeds; return launchSucceeds }
-		func settle() { events.append("settle"); onSettle?() }
-		func openWindowFolders() -> [URL] { windows }
-		func reopen(_ folders: [URL]) -> [URL] {
-			events.append("reopen " + folders.map(\.lastPathComponent).joined(separator: ","))
-			return folders
-		}
-		func crash() { events.append("crash"); running = false }
-		func reset() { events = [] }
-	}
-
 	/// Every path of `GlobalApplier` gives Finder its moment to settle once its windows are open again, and reads Finder's
 	/// defaults back only after it: what Finder writes as it starts is seen. A Finder that goes away meanwhile is launched
 	/// once more (its windows are not opened again), and `finderRelaunched` says whether it runs after that — the apply,
@@ -253,7 +232,7 @@ import Testing
 		let a = base.appendingPathComponent("A")
 		try FileManager.default.createDirectory(at: a, withIntermediateDirectories: true)
 		let ops = OperationStore(dirs: AppDirectories(root: base.appendingPathComponent("AppData")))
-		let finder = SettlingFinder()
+		let finder = GlobalDefaultsTests.FakeFinder(domain: domain.name)
 		finder.windows = [a]
 		let applier = GlobalApplier(operations: ops, domain: domain.name, finder: finder)
 
@@ -265,13 +244,13 @@ import Testing
 		} catch GlobalApplyError.verificationFailed(_, let diffs) {
 			sawIt = !diffs.isEmpty
 		}
-		#expect(sawIt && finder.events == ["quit", "launch", "reopen A", "settle"])
+		#expect(sawIt && finder.events == ["windows", "quit:icnv", "launch:Nlsv", "reopen:A", "settle"])
 
 		// Finder goes away while it settles: launched once more, its window not opened again; the apply holds.
 		finder.reset()
 		finder.onSettle = { [unowned finder] in finder.crash() }
 		let op = try applier.apply(ViewSettings(viewStyle: .list), presetName: "P")
-		#expect(finder.events == ["quit", "launch", "reopen A", "settle", "crash", "launch"] && op.finderRelaunched && finder.isRunning)
+		#expect(finder.events == ["windows", "quit:clmv", "launch:Nlsv", "reopen:A", "settle", "crash", "launch:Nlsv"] && op.finderRelaunched && finder.isRunning)
 		// And that launch fails too: recorded as not relaunched (the undo itself holds; nothing more is opened).
 		finder.reset()
 		finder.onSettle = { [unowned finder] in
@@ -279,26 +258,27 @@ import Testing
 			finder.launchSucceeds = false
 		}
 		let undo = try applier.undo(op)
-		#expect(finder.events == ["quit", "launch", "reopen A", "settle", "crash", "launch"] && !undo.finderRelaunched)
+		#expect(finder.events == ["windows", "quit:Nlsv", "launch:clmv", "reopen:A", "settle", "crash", "launch:clmv"] && !undo.finderRelaunched)
 		#expect(domain.style() == "clmv")
 
 		// The down time for other writes: the same settle and check.
 		finder.reset()
 		finder.launchSucceeds = true
-		finder.onSettle = nil
+		finder.onSettle = {}
 		let plain = try applier.runWithFinderQuit {}
-		#expect(plain.finderRelaunched && plain.reopenedWindows.map(\.lastPathComponent) == ["A"] && finder.events == ["quit", "launch", "reopen A", "settle"])
+		#expect(plain.finderRelaunched && plain.reopenedWindows.map(\.lastPathComponent) == ["A"])
+		#expect(finder.events == ["windows", "quit:clmv", "launch:clmv", "reopen:A", "settle"])
 		finder.reset()
 		finder.onSettle = { [unowned finder] in
 			finder.crash()
 			finder.launchSucceeds = false
 		}
 		let lost = try applier.runWithFinderQuit {}
-		#expect(!lost.finderRelaunched && finder.events == ["quit", "launch", "reopen A", "settle", "crash", "launch"])
+		#expect(!lost.finderRelaunched && finder.events == ["windows", "quit:clmv", "launch:clmv", "reopen:A", "settle", "crash", "launch:clmv"])
 		// A Finder that does not come back is neither given its windows nor waited for.
 		finder.reset()
 		let down = try applier.runWithFinderQuit {}
-		#expect(!down.finderRelaunched && down.reopenedWindows.isEmpty && finder.events == ["quit", "launch"])
+		#expect(!down.finderRelaunched && down.reopenedWindows.isEmpty && finder.events == ["windows", "quit:clmv", "launch:clmv"])
 	}
 
 	// MARK: FinderController on scripted processes

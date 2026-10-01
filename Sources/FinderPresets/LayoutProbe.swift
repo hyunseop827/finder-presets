@@ -1471,7 +1471,7 @@ enum LayoutProbe {
 				// The radio group: one button per choice, the stored choice selected.
 				let all = buttons(in: root)
 				log("  설정 창 버튼: \(all.map { "\($0.title)\($0.state == .on ? "(선택)" : "")\($0.isEnabled ? "" : "(꺼짐)")" }.joined(separator: ", "))")
-				log("  저장된 언어 선택: \(LanguageSetting.standard.choice.rawValue), 다시 시작 필요: \(LanguageSetting.standard.needsRelaunch(current: AppLanguage.code))")
+				log("  저장된 언어 선택: \(LanguageSetting.standard.choice.rawValue), 다시 시작 필요: \(LanguageSetting.standard.choice.needsRelaunch(system: LanguageSetting.standard.systemLanguages(), current: AppLanguage.code))")
 				failures += problems.map { "\(step): 설정 창: \($0)" }
 				await check("\(step): 설정 창이 열린 동안")
 				if guide.map({ !$0.isEmpty }) ?? true { await guideSteps(step, on: settings, steps: guide) }

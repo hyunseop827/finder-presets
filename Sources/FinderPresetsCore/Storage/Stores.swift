@@ -5,7 +5,6 @@ import CryptoKit
 public struct AppDirectories: Sendable {
 	public let root: URL
 	public var presets: URL { root.appendingPathComponent("presets") }
-	public var rules: URL { root.appendingPathComponent("rules.json") }
 	public var operations: URL { root.appendingPathComponent("operations") }
 
 	public init(root: URL) { self.root = root }
@@ -92,30 +91,6 @@ public struct PresetStore: Sendable {
 		p.createdAt = Date()
 		try save(p)
 		return p
-	}
-}
-
-/// rules.json (`finder-presets rule-set`). Keys this version does not know, such as `defaultPresetID` and a rule's `note` written by
-/// earlier versions, are ignored when reading and dropped on the next save.
-public struct RuleStore: Sendable {
-	public struct Document: Codable, Equatable, Sendable {
-		public var rules: [FolderRule]
-		public init(rules: [FolderRule] = []) {
-			self.rules = rules
-		}
-	}
-
-	public let dirs: AppDirectories
-	public init(dirs: AppDirectories) { self.dirs = dirs }
-
-	public func load() throws -> Document {
-		guard FileManager.default.fileExists(atPath: dirs.rules.path) else { return Document() }
-		return try JSONCoding.decoder().decode(Document.self, from: Data(contentsOf: dirs.rules))
-	}
-
-	public func save(_ doc: Document) throws {
-		try dirs.ensure()
-		try JSONCoding.encoder().encode(doc).write(to: dirs.rules, options: .atomic)
 	}
 }
 
@@ -244,21 +219,21 @@ public struct OperationStore: Sendable {
 		return check
 	}
 
-	/// Copies a parent .DS_Store into the operation directory; returns the backup descriptor. `suffix` names a later copy
-	/// of a store the operation already backed up (`Applier.writeAgain`), so the first copy is never replaced.
-	public func backup(store url: URL, for op: FinderPresetsOperation, suffix: String = "") throws -> StoreBackup {
+	/// Saves a parent .DS_Store into the operation directory; returns the backup descriptor. `contents`: the bytes the
+	/// caller read and changed (`StoreEditor.readContents`), nil when the store was absent — the backup holds exactly
+	/// that state and the store is not read again. `suffix` names a later copy of a store the operation already backed
+	/// up (`Applier.writeAgain`), so the first copy is never replaced.
+	public func backup(store url: URL, contents: Data?, for op: FinderPresetsOperation, suffix: String = "") throws -> StoreBackup {
 		let dir = directory(for: op.id).appendingPathComponent("backups")
 		try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-		guard FileManager.default.fileExists(atPath: url.path) else {
+		guard let contents else {
 			return StoreBackup(storePath: url.path, backupFile: nil, sha256: nil)
 		}
 		let name = "\(Self.shortHash(url.path))\(suffix).DS_Store"
 		let dest = dir.appendingPathComponent(name)
-		if FileManager.default.fileExists(atPath: dest.path) { try FileManager.default.removeItem(at: dest) }
-		try FileManager.default.copyItem(at: url, to: dest)
-		let original = try Data(contentsOf: url)
+		try contents.write(to: dest)
 		let copy = try Data(contentsOf: dest)
-		guard original == copy else { throw StoreEditorError.backupMismatch(url.path) }
+		guard contents == copy else { throw StoreEditorError.backupMismatch(url.path) }
 		return StoreBackup(storePath: url.path, backupFile: "backups/\(name)", sha256: Self.sha256Hex(copy))
 	}
 

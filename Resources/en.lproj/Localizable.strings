@@ -14,6 +14,9 @@
 "폴더 목록을 저장하지 못했습니다: %@" = "Could not save the folder list: %@";
 "%@의 보기 설정을 프리셋으로 저장했습니다." = "Saved the view settings of %@ as a preset.";
 "%@에는 고유 설정이 없어 현재 표시되는 값(Finder 기본값)을 저장했습니다." = "%@ has no settings of its own, so the values Finder shows now (its defaults) were saved.";
+"프리셋을 만들지 못한 폴더:" = "Could not make a preset from:";
+"폴더로 프리셋을 만들지 못했습니다." = "No preset could be made from the folders.";
+"고유 설정이 없어 Finder 기본값을 저장: %@" = "no settings of their own, saved Finder's defaults: %@";
 "가져오기" = "Import";
 "이 폴더의 현재 Finder 보기 설정을 프리셋으로 가져옵니다" = "Imports the folder's current Finder view settings as a preset";
 "이름이 비어 있어 프리셋 \"%@\"의 이름을 바꾸지 않았습니다." = "The name is empty, so the preset \"%@\" was not renamed.";
@@ -68,7 +71,7 @@
 "프리셋에 적용할 값이 없습니다." = "The preset has no values to apply.";
 "Finder 기본 보기와 홈 폴더를 확인하는 중…" = "Checking Finder's default view and the home folders…";
 "확인하는 동안 프리셋이나 선택이 바뀌어 그 결과를 쓰지 않았습니다. 다시 \"시스템 전체에 적용…\"을 누르세요." = "While checking, the preset or the selection changed, so the result was not used. Click \"Apply System-Wide…\" again.";
-"Finder 기본 보기는 이미 \"%@\"과 같습니다." = "Finder's default view already matches \"%@\".";
+"Finder 기본 보기는 이미 \"%@\" 프리셋과 같습니다." = "Finder's default view already matches \"%@\".";
 "Finder 기본 보기를 \"%@\"(으)로 바꿉니다." = "Finder's default view changes to \"%@\".";
 "홈 폴더는 건드리지 않습니다." = "Home folders are left alone.";
 "변경할 것이 없습니다." = "Nothing to change.";
@@ -79,6 +82,7 @@
 "Finder를 다시 시작했습니다." = "Finder was restarted.";
 "Finder 재실행에 실패했습니다. 직접 Finder를 실행해 주세요." = "Finder failed to restart. Open it yourself.";
 "홈 폴더는 바꾸지 않음" = "home folders left alone";
+"Finder 기본 보기는 바꾸지 못했습니다: %@\n\n홈 폴더도 바꾸지 않았습니다." = "Finder's default view could not be changed: %@\n\nThe home folders were left alone too.";
 "Finder 기본 보기는 이미 동일" = "Finder's default view already the same";
 "Finder 기본 보기를 \"%@\"(으)로 변경" = "Finder's default view changed to \"%@\"";
 " (그중 %lld개는 Finder가 덮어씀 — 다시 적용하세요)" = " (Finder overwrote %lld of them — apply again)";
@@ -91,7 +95,6 @@
 "폴더나 프리셋 JSON 파일만 놓을 수 있습니다: %@" = "Only folders and preset JSON files can be dropped here: %@";
 
 /* FinderServices */
-"셀프테스트와 레이아웃 점검 중에는 Finder 서비스를 받지 않습니다." = "The self-test and the layout probe do not take Finder services.";
 "다른 작업이 진행 중이라 적용 확인을 열지 않았습니다." = "Another task is running, so the apply confirmation was not opened.";
 "다른 창이나 알림이 열려 있어 적용 확인을 열지 않았습니다." = "Another dialog is open, so the apply confirmation was not opened.";
 "폴더만 받을 수 있습니다. 무시한 항목: %@" = "Only folders can be used. Ignored: %@";
@@ -100,9 +103,6 @@
 "이미 목록에 있음: %@" = "already in the list: %@";
 "폴더를 목록에 추가하지 않았습니다." = "No folder was added to the list.";
 "홈 폴더나 그 상위 폴더라 넣지 않음: %@" = "not added (the home folder or above it): %@";
-"프리셋을 만들지 못한 폴더:" = "Could not make a preset from:";
-"Finder의 폴더로 프리셋을 만들지 못했습니다." = "No preset could be made from the Finder folders.";
-"고유 설정이 없어 Finder 기본값을 저장: %@" = "no settings of their own, saved Finder's defaults: %@";
 "알림을 먼저 확인하세요." = "Check the alert first.";
 "%@을(를) 목록에서 선택했습니다. %@ 준비되면 \"선택한 폴더에 적용…\"을 누르세요." = "Selected %@ in the list. %@ When you are ready, click \"Apply to Selected…\".";
 
@@ -125,7 +125,6 @@
 "유지" = "Keep";
 "켬" = "On";
 "끔" = "Off";
-"하단" = "Bottom";
 "오른쪽" = "Right";
 "보기" = "View";
 "보기 방식" = "View";
@@ -135,7 +134,6 @@
 "레이블" = "Label";
 "레이블 위치" = "Label position";
 "정보·미리보기" = "Info";
-"항목 정보 / 미리보기" = "Item info / icon preview";
 
 /* HelpSheet */
 "Finder에서 폴더를 원하는 모양(보기 방식, 아이콘 크기, 정렬)으로 맞추고 창을 닫습니다." = "In Finder, give a folder the look you want (view, icon size, sort) and close the window.";
@@ -175,7 +173,6 @@
 "확인하는 동안 기록이 바뀌어 되돌리지 않았습니다. 목록을 다시 확인하세요." = "While checking, the record changed, so nothing was undone. Check the list again.";
 "기록을 읽지 못했습니다: %@" = "Could not read the history: %@";
 "다른 작업이 끝난 뒤에 되돌리세요." = "Undo when the current task has finished.";
-"셀프테스트와 레이아웃 점검은 Finder 기본 보기를 되돌리지 않습니다." = "The self-test and the layout probe never undo Finder's default view.";
 "Finder를 종료하고 Finder 기본 보기를 되돌리는 중… (Finder가 다시 시작됩니다)" = "Quitting Finder and undoing its default view… (Finder restarts)";
 "되돌리는 중…" = "Undoing…";
 " (일부 폴더는 이미 되돌려졌을 수 있습니다. 기록을 다시 확인하세요)" = " (some folders may already be undone; check the history again)";
@@ -390,13 +387,14 @@
 "시스템 전체에 적용…" = "Apply System-Wide…";
 "프리셋을 선택하세요" = "Select a preset";
 "적용할 프리셋: %@" = "Preset to apply: %@";
+"적용할 프리셋: %@. 모든 값이 \"유지\"라 적용할 수 없습니다." = "Preset to apply: %@. Every value is \"Keep\", so it cannot be applied.";
 "왼쪽에서 프리셋을 선택하세요" = "Select a preset on the left";
 "시스템 전체에 적용할까요?" = "Apply system-wide?";
 "프리셋:" = "Preset:";
 "프리셋 %@" = "Preset %@";
 "대상 폴더" = "Folders";
 "열려 있는 Finder 창은 닫혔다가 다시 열립니다(검색·최근 항목 창 제외).\n진행 중인 복사나 이동이 있으면 끝난 뒤에 하세요.\n바뀌기 전 상태는 자동으로 백업됩니다." = "Finder's windows close and reopen (not search or Recents).\nIf a copy or move is in progress, wait until it has finished.\nThe state before the change is backed up automatically.";
-"Finder 기본 보기는 이미 \"%@\"과 같고," = "Finder's default view already matches \"%@\".";
+"Finder 기본 보기는 이미 \"%@\" 프리셋과 같고," = "Finder's default view already matches \"%@\".";
 "Finder 기본 보기를 \"%@\"(으)로 바꾸고," = "Finder's default view changes to \"%@\".";
 "홈 폴더는 이미 동일해 바꾸지 않습니다." = "Home folders are already the same and stay as they are.";
 "Finder가 자동으로 다시 시작됩니다." = "Finder restarts automatically.";
@@ -638,16 +636,16 @@
 "앞 Finder 창의 폴더를 확인하는 중…" = "Checking the front Finder window's folder…";
 "빠른 적용: %@을(를) 확인하는 중…" = "Quick preset: checking %@…";
 "확인하는 동안 프리셋이 바뀌어 빠른 적용을 하지 않았습니다. 다시 누르세요." = "While checking, the quick preset changed, so it was not applied. Press the shortcut again.";
-"%@은(는) 이미 \"%@\"과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다." = "%@ already matches \"%@\": nothing to change, and Finder was left running.";
+"%@은(는) 이미 \"%@\" 프리셋과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다." = "%@ already matches \"%@\": nothing to change, and Finder was left running.";
 "빠른 적용: %@에 \"%@\"을(를) 쓰는 중…" = "Quick preset: writing to %@ (\"%@\")…";
 "Finder를 다시 시작하고 이 폴더를 다시 열었습니다." = "Restarted Finder and opened this folder again.";
 "완료: %@에 \"%@\"을(를) 적용했습니다." = "Done: %@ now uses \"%@\".";
 "빠른 적용: %@에 쓰지 못했습니다(실패). 툴바의 \"기록\"에서 이 작업을 확인하세요." = "Quick preset: writing to %@ failed. See this operation in \"History\" in the toolbar.";
 "Finder가 종료되지 않아 빠른 적용을 하지 않았습니다(아무것도 바꾸지 않음). Finder의 복사나 대화상자가 끝난 뒤 다시 누르세요." = "Finder did not quit, so the quick preset was not applied (nothing was changed). Press the shortcut again once Finder's copy or dialog is done.";
 "빠른 적용: Finder가 다시 시작한 뒤 %@의 보기 설정을 덮어썼습니다. 단축키를 한 번 더 누르세요(이 작업은 툴바의 \"기록\"에 있습니다)." = "Quick preset: after restarting, Finder overwrote the view settings of %@. Press the shortcut once more (this operation is in \"History\" in the toolbar).";
-"빠른 적용: %@의 보기 설정 파일은 이미 \"%@\"과 같아 쓰지 않았습니다." = "Quick preset: the view settings file of %@ already matched \"%@\", so nothing was written.";
-"완료: %@의 보기 설정 파일은 이미 \"%@\"과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\", but the Finder window showed another view. Finder was restarted and the folder opened again; the file was left as it was.";
-"완료: %@의 보기 설정 파일은 이미 \"%@\"과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\". The Finder window's view could not be checked, so Finder was restarted and the folder opened again; the file was left as it was.";
+"빠른 적용: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같아 쓰지 않았습니다." = "Quick preset: the view settings file of %@ already matched \"%@\", so nothing was written.";
+"완료: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\", but the Finder window showed another view. Finder was restarted and the folder opened again; the file was left as it was.";
+"완료: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\". The Finder window's view could not be checked, so Finder was restarted and the folder opened again; the file was left as it was.";
 "빠른 적용: Finder를 다시 시작하고 %@을(를) 다시 확인하는 중…" = "Quick preset: restarting Finder and checking %@ again…";
 "빠른 적용 해제" = "Remove Quick Preset";
 "빠른 적용으로 지정" = "Make Quick Preset";

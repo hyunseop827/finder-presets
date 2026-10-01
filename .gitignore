@@ -5,7 +5,8 @@
 ._*
 .AppleDouble
 .LSOverride
-Icon?
+# Icon must end with two \r
+Icon
 
 # SwiftPM / Xcode build output
 .build/

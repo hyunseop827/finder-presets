@@ -287,7 +287,7 @@ struct GlobalApplyPlan {
 final class AppModel {
 	static let helpDismissedKey = "helpSheetDismissed"
 
-	let dirs = AppDirectories.standard
+	let dirs: AppDirectories
 	let presetStore: PresetStore
 	let operationStore: OperationStore
 	private(set) var globals = GlobalDefaults.readCurrent()
@@ -404,11 +404,14 @@ final class AppModel {
 	/// Unreadable preset files already reported, so every reload does not raise the same alert again.
 	@ObservationIgnored private var reportedUnreadablePresets = Set<String>()
 
-	init() {
+	/// `dirs` and `quickPresetSetting`: the data folder and the star's store — the app's own in the app, a temporary
+	/// folder and an in-memory star in the tests.
+	init(dirs: AppDirectories = .standard, quickPresetSetting: QuickPresetSetting? = nil) {
+		self.dirs = dirs
 		presetStore = PresetStore(dirs: dirs)
 		operationStore = OperationStore(dirs: dirs)
-		quickPresetSetting = .forThisLaunch
-		quickPresetID = quickPresetSetting.id
+		self.quickPresetSetting = quickPresetSetting ?? .forThisLaunch
+		quickPresetID = self.quickPresetSetting.id
 		reload(selectFirstPreset: true)
 	}
 
@@ -575,29 +578,70 @@ final class AppModel {
 
 	// MARK: Presets
 
-	/// "이 폴더처럼": reads the folder's current Finder view settings and stores them as a preset.
+	/// "이 폴더처럼" (the open panel, one folder): reads the folder's current Finder view settings, stores them as a preset
+	/// and selects it.
 	func importPreset(from folder: URL) {
 		do {
-			let made = try makePreset(from: folder)
-			let name = Fmt.name(folder.lastPathComponent)
-			status = made.ownSettings ? String(localized: "\(name)의 보기 설정을 프리셋으로 저장했습니다.")
-				: String(localized: "\(name)에는 고유 설정이 없어 현재 표시되는 값(Finder 기본값)을 저장했습니다.")
+			let made = try storePreset(from: folder)
+			reload()
+			selectedPresetID = made.preset.id
+			status = Self.presetMadeNote(folder, ownSettings: made.ownSettings)
 		} catch { errorMessage = ErrorText.describe(error) }
 	}
 
-	/// Stores the folder's current Finder view settings as a new preset named after the folder ("사진 2" when the name is
-	/// taken) and selects it. `ownSettings` is false when the folder has none and Finder's defaults were stored. Throws,
-	/// with nothing written, when the folder's settings cannot be read (also the Finder services, FinderServices.swift).
+	/// Folders dropped on the preset list and the Finder service "…로 프리셋 만들기": one preset per folder
+	/// (`storePreset`), the list read once afterwards and the last one selected. Folders that cannot be read are reported
+	/// together, each by name; the others still become presets. Returns nil when a preset was made, else the status line
+	/// (the service's reply).
 	@discardableResult
-	func makePreset(from folder: URL) throws -> (preset: Preset, ownSettings: Bool) {
+	func makePresets(from folders: [URL]) -> String? {
+		var made: [(preset: Preset, folder: URL, ownSettings: Bool)] = []
+		var failures: [String] = []
+		for folder in folders {
+			do {
+				// The presets made so far are not in `presets` yet: their names are taken too.
+				let result = try storePreset(from: folder, alsoTaken: made.map(\.preset.name))
+				made.append((result.preset, folder, result.ownSettings))
+			} catch {
+				failures.append("\(folder.lastPathComponent): \(ErrorText.describe(error))")
+			}
+		}
+		if !failures.isEmpty {
+			report(String(localized: "프리셋을 만들지 못한 폴더:") + "\n" + failures.joined(separator: "\n"))
+		}
+		guard let last = made.last else {
+			status = String(localized: "폴더로 프리셋을 만들지 못했습니다.")
+			return status
+		}
+		reload()
+		selectedPresetID = last.preset.id
+		if made.count == 1 {
+			status = Self.presetMadeNote(last.folder, ownSettings: last.ownSettings)
+			return nil
+		}
+		let defaultsOnly = made.filter { !$0.ownSettings }.map(\.folder.lastPathComponent)
+		status = String(localized: "폴더로 프리셋 \(made.count)개를 만들었습니다: \(Fmt.name(made.map(\.preset.name).joined(separator: ", ")))")
+			+ (defaultsOnly.isEmpty ? "" : " · " + String(localized: "고유 설정이 없어 Finder 기본값을 저장: \(Fmt.name(defaultsOnly.joined(separator: ", ")))"))
+		return nil
+	}
+
+	/// The status line after one folder became a preset.
+	private static func presetMadeNote(_ folder: URL, ownSettings: Bool) -> String {
+		let name = Fmt.name(folder.lastPathComponent)
+		return ownSettings ? String(localized: "\(name)의 보기 설정을 프리셋으로 저장했습니다.")
+			: String(localized: "\(name)에는 고유 설정이 없어 현재 표시되는 값(Finder 기본값)을 저장했습니다.")
+	}
+
+	/// Stores the folder's current Finder view settings as a new preset named after the folder ("사진 2" when a preset or
+	/// one of `alsoTaken` has the name, ignoring case like the editor) without reading the list again: the caller reloads
+	/// once. `ownSettings` is false when the folder has none and Finder's defaults were stored. Throws, with nothing
+	/// written, when the folder's settings cannot be read.
+	private func storePreset(from folder: URL, alsoTaken: [String] = []) throws -> (preset: Preset, ownSettings: Bool) {
 		let loc = try ParentStoreLocator.locate(folder)
 		let state = try Planner.readState(at: loc, globals: globals)
 		let settings = state.hasExplicitRecords ? state.explicit : state.effective
-		let name = PresetDraft.uniqueName(folder.lastPathComponent) { name in presets.contains { $0.name == name } }
-		let p = Preset(name: name, settings: settings)
+		let p = Preset(name: PresetDraft.uniqueName(folder.lastPathComponent, among: presets.map(\.name) + alsoTaken), settings: settings)
 		try presetStore.save(p)
-		reload()
-		selectedPresetID = p.id
 		return (p, state.hasExplicitRecords)
 	}
 
@@ -616,13 +660,21 @@ final class AppModel {
 			status = String(localized: "이름이 비어 있어 프리셋 \"\(Fmt.name(preset.name))\"의 이름을 바꾸지 않았습니다.")
 			return
 		}
-		guard trimmed != preset.name else { return }
-		var p = preset; p.name = trimmed
+		// The file as it is now, like the editor's save (`PresetDraft.commit`): the row's copy may be stale (a change by
+		// `finder-presets preset-set` or by hand), and saving it would undo that change or write a removed file again.
+		reload()
+		guard var p = self.preset(preset.id) else {
+			report(PresetDraft.CommitError.missing.message)
+			return
+		}
+		let old = p.name
+		guard trimmed != old else { return }
+		p.name = trimmed
 		do {
 			try presetStore.save(p)
 			reload()
 			// A status line that still names the old name would be stale.
-			status = String(localized: "프리셋 \"\(Fmt.name(preset.name))\"의 이름을 \"\(Fmt.name(trimmed))\"(으)로 바꿨습니다.")
+			status = String(localized: "프리셋 \"\(Fmt.name(old))\"의 이름을 \"\(Fmt.name(trimmed))\"(으)로 바꿨습니다.")
 		} catch { errorMessage = ErrorText.describe(error) }
 	}
 
@@ -644,13 +696,15 @@ final class AppModel {
 		return message
 	}
 
-	/// Folders assigned to the deleted preset go back to "선택한 프리셋 사용" (reload clears them and saves targets.json), and
-	/// its star goes with it (also while another preset file cannot be read, when reload leaves the star alone).
+	/// Folders assigned to the deleted preset go back to "선택한 프리셋 사용" (saved in targets.json) and its star goes with
+	/// it — here rather than in reload, which leaves both alone while another preset file cannot be read. The assignments
+	/// stay only while targets.json itself cannot be read: `targets` is not the stored list then (`targetsFileProblem`).
 	func deletePreset(_ id: UUID) {
 		do {
 			try presetStore.delete(id: id)
 			if quickPresetID == id { quickPresetSetting.set(nil); quickPresetID = nil }
 			reload()
+			if targetsFileProblem == nil { clearAssignments { $0 == id } }
 			if selectedPresetID == id { selectedPresetID = presets.first?.id }
 		} catch { errorMessage = ErrorText.describe(error) }
 	}
@@ -684,7 +738,7 @@ final class AppModel {
 		if panel.runModal() == .OK { importPresetFiles(panel.urls) }
 	}
 
-	/// Imports preset JSON files. A name that is already taken gets " 2", " 3", … like a folder import.
+	/// Imports preset JSON files. A name that is already taken (ignoring case) gets " 2", " 3", … like a folder import.
 	/// Files that cannot be read are reported together; the others are still imported.
 	func importPresetFiles(_ urls: [URL]) {
 		var imported: [Preset] = []
@@ -692,9 +746,9 @@ final class AppModel {
 		for url in urls {
 			do {
 				var p = try presetStore.importPreset(from: url)
-				let taken = Set(presets.map(\.name) + imported.map(\.name))
-				if taken.contains(p.name) {
-					p.name = PresetDraft.uniqueName(p.name, taken: taken.contains)
+				let unique = PresetDraft.uniqueName(p.name, among: presets.map(\.name) + imported.map(\.name))
+				if unique != p.name {
+					p.name = unique
 					try presetStore.save(p)
 				}
 				imported.append(p)
@@ -1154,7 +1208,7 @@ final class AppModel {
 				let c = plan?.counts ?? [:]
 				let changes = plan?.changes.count ?? 0
 				let globalPart = globalSettings.isEmpty ? String(localized: "그룹 기준만 있는 프리셋이라 Finder 기본 보기는 바꾸지 않습니다.")
-					: globalDiffs.isEmpty ? String(localized: "Finder 기본 보기는 이미 \"\(Fmt.name(preset.name))\"과 같습니다.")
+					: globalDiffs.isEmpty ? String(localized: "Finder 기본 보기는 이미 \"\(Fmt.name(preset.name))\" 프리셋과 같습니다.")
 					: String(localized: "Finder 기본 보기를 \"\(Fmt.name(preset.name))\"(으)로 바꿉니다.")
 				// No view changes but icon positions to reset (folders that follow the new default): say that instead of "0개".
 				let resets = plan?.iconPositionResets ?? 0
@@ -1243,27 +1297,9 @@ final class AppModel {
 					case nil: ""
 				}
 				if let flowError {
-					let reason = ErrorText.describe(flowError)
-					var parts = [String(localized: "중단: \(reason)")]
-					var message = reason
-					if let summary, folderOp != nil {
-						if summary.changed > 0 || summary.positionsOnly == 0 {
-							parts.append(String(localized: "홈 폴더 \(summary.changed)개는 이미 변경됨 (되돌리기: 툴바의 \"기록\")"))
-							message = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(message)\n\n홈 폴더 \(summary.changed)개는 이미 변경됐습니다. 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
-						} else {
-							// Only icon positions were written: "홈 폴더 0개는 이미 변경됨" would hide them, and they can be undone too.
-							let positions = HistoryText.positionsOnlyFolders(summary.positionsOnly, undo: false)
-							parts.append(String(localized: "이미 씀: \(positions) (되돌리기: 툴바의 \"기록\")"))
-							message = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(message)\n\n홈 폴더에는 이미 썼습니다(\(positions)). 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
-						}
-						if summary.changed > 0 && summary.positionsOnly > 0 {
-							parts.append(HistoryText.positionsOnlyFolders(summary.positionsOnly, undo: false))
-						}
-					} else if folderRequest != nil {
-						parts.append(String(localized: "홈 폴더는 바꾸지 않음"))
-					}
-					self.status = parts.joined(separator: " · ") + relaunchNote
-					self.errorMessage = message
+					let stop = Self.systemApplyStopNote(ErrorText.describe(flowError), home: summary, homeRequested: folderRequest != nil)
+					self.status = stop.status + relaunchNote
+					self.errorMessage = stop.alert
 				} else {
 					var parts = [!pending.writesGlobalDefaults ? String(localized: "Finder 기본 보기는 바꾸지 않음")
 						: pending.globalDiffs.isEmpty ? String(localized: "Finder 기본 보기는 이미 동일")
@@ -1346,6 +1382,36 @@ final class AppModel {
 	nonisolated static func systemApplyNeedsAttention(_ run: SystemApplyRun) -> Bool {
 		run.flowError != nil || run.folderError != nil || run.overwritten > 0 || run.relaunched == false
 			|| (run.folderOp?.summary.failed ?? 0) > 0
+	}
+
+	/// The status line and the alert of a "시스템 전체에 적용" that stopped (`SystemApplyRun.flowError`, worded `reason`).
+	/// `home`: what the home folders' write did, when it ran (it only runs once Finder has quit, so the flow then stopped
+	/// at Finder's defaults); `homeRequested`: the apply had home folders to write. Folders it wrote are named with where
+	/// to undo them; a write that wrote none (every folder failed or already matched) offers nothing to undo. Failed
+	/// folders are counted either way.
+	nonisolated static func systemApplyStopNote(_ reason: String, home: OperationSummary?, homeRequested: Bool) -> (status: String, alert: String) {
+		var parts = [String(localized: "중단: \(reason)")]
+		guard let home else {
+			if homeRequested { parts.append(String(localized: "홈 폴더는 바꾸지 않음")) }
+			return (parts.joined(separator: " · "), reason)
+		}
+		let alert: String
+		if home.changed > 0 {
+			parts.append(String(localized: "홈 폴더 \(home.changed)개는 이미 변경됨 (되돌리기: 툴바의 \"기록\")"))
+			if home.positionsOnly > 0 { parts.append(HistoryText.positionsOnlyFolders(home.positionsOnly, undo: false)) }
+			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더 \(home.changed)개는 이미 변경됐습니다. 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
+		} else if home.positionsOnly > 0 {
+			// Only icon positions were written: "홈 폴더 0개는 이미 변경됨" would hide them, and they can be undone too.
+			let positions = HistoryText.positionsOnlyFolders(home.positionsOnly, undo: false)
+			parts.append(String(localized: "이미 씀: \(positions) (되돌리기: 툴바의 \"기록\")"))
+			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더에는 이미 썼습니다(\(positions)). 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
+		} else {
+			// Nothing written in the home folders: not "홈 폴더 0개는 이미 변경됨", and nothing to undo there.
+			parts.append(String(localized: "홈 폴더는 바꾸지 않음"))
+			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더도 바꾸지 않았습니다.")
+		}
+		if home.failed > 0 { parts.append(String(localized: "홈 폴더 \(home.failed)개 실패")) }
+		return (parts.joined(separator: " · "), alert)
 	}
 }
 

@@ -66,7 +66,8 @@ enum PresetAreaDropHandler {
 				}
 			}
 		}
-		for folder in folders { model.importPreset(from: folder) }
+		// Together, like the Finder service: one alert names every folder that failed, one status line every preset made.
+		if !folders.isEmpty { model.makePresets(from: folders) }
 		if !files.isEmpty { model.importPresetFiles(files) }
 		if !rejected.isEmpty {
 			model.report(String(localized: "폴더나 프리셋 JSON 파일만 놓을 수 있습니다: \(rejected.joined(separator: ", "))"))

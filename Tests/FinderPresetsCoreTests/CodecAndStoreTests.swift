@@ -163,6 +163,39 @@ import DSStore
 		#expect(store.records.filter { $0.filename == "T" }.count == 6)   // one record per type, nothing duplicated
 	}
 
+	/// A folder that holds only one of the two list records (`lsvp` with dict columns, or `lsvC` with array columns): a
+	/// preset that changes one list option makes the missing record from the folder's own, never from the base values,
+	/// so every option the preset leaves alone keeps what the folder showed, in both records.
+	@Test func aMissingListRecordIsMadeFromTheFoldersOtherOne() throws {
+		let own: [String: Any] = ["viewOptionsVersion": 1, "textSize": 11.0, "iconSize": 32.0, "sortColumn": "kind", "custom": "keep",
+		                          "columns": ["kind": ["index": 1, "width": 120, "ascending": false, "visible": true],
+		                                      "name": ["index": 0, "width": 400, "ascending": true, "visible": true]]]
+		func record(_ code: String, _ plist: [String: Any]) throws -> DSStore.Record {
+			DSStore.Record(filename: "T", type: DSStore.RecordType(fourCC: DSStore.FourCC(code)!), value: .data(try ViewRecordCodec.data(from: plist)))
+		}
+		func plist(_ set: ManagedRecordSet, _ code: String) throws -> [String: Any] {
+			try #require(set[code]?.dataValue.flatMap(ViewRecordCodec.plist(from:)), "\(code)")
+		}
+		let sortByName = ViewSettings(list: ListViewSettings(sortColumn: .name))
+		for (code, value) in [("lsvp", own), ("lsvC", ViewRecordCodec.arrayForm(ofList: own))] {
+			var store = DSStore()
+			store.add(try record(code, value))
+			let before = ViewRecordCodec.decode(StoreEditor.managedRecords(in: store, key: "T"))
+			let after = StoreEditor.managedRecords(in: try StoreEditor.apply(sortByName, to: "T", in: store, bases: RecordBases()), key: "T")
+			// Only the sort column changed (and the direction read with it); nothing came from the base values.
+			#expect(ViewRecordCodec.decode(after).differences(to: before).map(\.field).sorted() == ["list.sortAscending", "list.sortColumn"], "\(code)")
+			let c = try plist(after, "lsvC"), p = try plist(after, "lsvp")
+			for (name, list) in [("lsvC", c), ("lsvp", p)] {
+				#expect(list["textSize"] as? Double == 11 && list["iconSize"] as? Double == 32 && list["sortColumn"] as? String == "name", "\(code) → \(name)")
+				#expect(list["useRelativeDates"] == nil && list["calculateAllSizes"] == nil && list["custom"] as? String == "keep", "\(code) → \(name)")
+			}
+			let cColumns = try #require(c["columns"] as? [[String: Any]])
+			#expect(cColumns.map { $0["identifier"] as? String } == ["name", "kind"] && cColumns[0]["width"] as? Int == 400, "\(code)")
+			let pColumns = try #require(p["columns"] as? [String: [String: Any]])
+			#expect(pColumns.count == 2 && pColumns["kind"]?["ascending"] as? Bool == false && pColumns["name"]?["index"] as? Int == 0, "\(code)")
+		}
+	}
+
 	/// Finder-written fixture: Folder-A has no vstl, so a preset made from it keeps the view style of the folder it is applied to.
 	@Test func presetWithoutViewStyleKeepsTheFoldersViewStyle() throws {
 		let original = try DSStore.read(from: Self.fixture)

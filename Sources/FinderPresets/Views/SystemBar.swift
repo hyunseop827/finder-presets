@@ -9,6 +9,10 @@ struct SystemBar: View {
 
 	static var help: String { String(localized: "Finder의 기본 보기(고유 설정이 없는 모든 폴더)를 선택한 프리셋으로 바꿉니다. Finder가 자동으로 다시 시작됩니다.") }
 
+	/// "시스템 전체에 적용…" needs a selected preset with something to write: one whose values are all "유지" is refused by
+	/// `prepareGlobalApply`, so the button is disabled for it and the chip says why (`PresetChip.explanation`).
+	static func canApply(_ preset: Preset?) -> Bool { preset.map { !$0.settings.isEmpty } ?? false }
+
 	var body: some View {
 		@Bindable var model = model
 		let preset = model.selectedPreset
@@ -62,7 +66,7 @@ struct SystemBar: View {
 			// A dangerous action: bordered, never the prominent style.
 			Button("시스템 전체에 적용…") { model.prepareGlobalApply() }
 				.buttonStyle(.bordered)
-				.disabled(model.selectedPreset == nil || model.isWorking)
+				.disabled(!Self.canApply(preset) || model.isWorking)
 				.fixedSize()
 				.accessibilityIdentifier("applySystem")
 				.probeFrame("applySystem")
@@ -110,9 +114,16 @@ struct PresetChip: View {
 			}
 		}
 		.font(.subheadline)
-		.help(preset.map { "적용할 프리셋: \($0.name)" } ?? "왼쪽에서 프리셋을 선택하세요")
+		.help(Self.explanation(preset))
 		.accessibilityElement(children: .ignore)
-		.accessibilityLabel(preset.map { "적용할 프리셋: \($0.name)" } ?? "왼쪽에서 프리셋을 선택하세요")
+		.accessibilityLabel(Self.explanation(preset))
+	}
+
+	/// The tooltip and what VoiceOver reads: the preset, and why "시스템 전체에 적용…" is disabled when it is.
+	static func explanation(_ preset: Preset?) -> String {
+		guard let preset else { return String(localized: "왼쪽에서 프리셋을 선택하세요") }
+		if preset.settings.isEmpty { return String(localized: "적용할 프리셋: \(preset.name). 모든 값이 \"유지\"라 적용할 수 없습니다.") }
+		return String(localized: "적용할 프리셋: \(preset.name)")
 	}
 }
 
@@ -196,7 +207,7 @@ struct GlobalConfirmSheet: View {
 		guard let p = model.pendingGlobalApply else { return "" }
 		let name = p.preset.name
 		let global = !p.writesGlobalDefaults ? String(localized: "그룹 기준만 있는 프리셋이라 Finder 기본 보기는 바꾸지 않고,")
-			: p.globalDiffs.isEmpty ? String(localized: "Finder 기본 보기는 이미 \"\(name)\"과 같고,")
+			: p.globalDiffs.isEmpty ? String(localized: "Finder 기본 보기는 이미 \"\(name)\" 프리셋과 같고,")
 			: String(localized: "Finder 기본 보기를 \"\(name)\"(으)로 바꾸고,")
 		let resets = p.plan?.iconPositionResets ?? 0
 		// No view changes but icon positions to reset: the positions note alone describes what is written in the home folder.

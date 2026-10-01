@@ -599,6 +599,8 @@ struct NumberSlider: NSViewRepresentable {
 			default: .regular
 		}
 		if slider.doubleValue != position { slider.doubleValue = position }
+		// The fill AppKit draws in a key window (`AccentKnobCell` calls super): gray while "유지", where AppKit's
+		// default would be the accent color under the system's gray knob.
 		slider.trackFillColor = kept ? .tertiaryLabelColor : .controlAccentColor
 		(slider.cell as? AccentKnobCell)?.accent = !kept
 		slider.needsDisplay = true
@@ -622,9 +624,10 @@ struct NumberSlider: NSViewRepresentable {
 private final class AccentKnobCell: NSSliderCell {
 	var accent = true
 
-	/// The bar with the part up to the knob filled in the accent color. A cell of our own does not get AppKit's own
-	/// `trackFillColor` drawing (that is the stock cell's), so the fill is drawn here — the same fill the stock slider
-	/// shows, and none while the option is "유지".
+	/// The bar with the part up to the knob filled in the accent color. AppKit's own fill (`super`) is the slider's
+	/// `trackFillColor` only in a key window and gray in any other, while the knob drawn here stays in the accent color:
+	/// the fill is drawn over it here so the two always match. While the option is "유지" only AppKit's fill is drawn,
+	/// gray (`NumberSlider` sets `trackFillColor` for it).
 	override func drawBar(inside rect: NSRect, flipped: Bool) {
 		super.drawBar(inside: rect, flipped: flipped)
 		guard accent, maxValue > minValue else { return }

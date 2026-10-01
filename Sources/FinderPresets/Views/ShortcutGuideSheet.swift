@@ -123,7 +123,7 @@ enum ShortcutStateText {
 /// The walkthrough, at one fixed size. It opens on the Settings window (Views/LanguageSettings.swift), which is smaller
 /// than the sheet: like the history sheet on the main window, the sheet is the size its content needs.
 struct ShortcutGuideSheet: View {
-	/// Fixed size. Wider than nothing scrolls: every step's drawing, sentence and controls have their own fixed height.
+	/// Fixed size, and nothing scrolls: every step's drawing, sentence and controls have their own fixed height.
 	static let size = CGSize(width: 440, height: 460)
 	/// Heights inside the sheet (they add up to `size` with the 16pt padding and the 10pt spacing).
 	/// `textHeight`: four lines of `.callout` (16pt a line in both languages) and 4pt to spare — the longest step needs

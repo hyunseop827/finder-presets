@@ -160,6 +160,16 @@ struct HelpSheet: View {
 					.keyboardShortcut(.defaultAction)
 					.accessibilityIdentifier("helpClose")
 			}
+			// Esc closes the sheet as well, through `dismissHelp` so "다시 보지 않기" is kept: an invisible button that only
+			// carries the shortcut, like the shortcut guide's (a sheet without a `.cancelAction` does not close on Esc).
+			.background {
+				Button("닫기") { model.dismissHelp(dontShowAgain: dontShowAgain) }
+					.keyboardShortcut(.cancelAction)
+					.opacity(0)
+					.frame(width: 0, height: 0)
+					.allowsHitTesting(false)
+					.accessibilityHidden(true)
+			}
 		}
 		.padding(16)
 		.frame(width: Self.size.width, height: Self.size.height)

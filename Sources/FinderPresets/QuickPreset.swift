@@ -337,6 +337,10 @@ struct QuickApplyWrite: Sendable {
 
 	var changed: Bool { (operation?.summary.changed ?? 0) > 0 }
 
+	/// Whether an operation was recorded (or its record stopped partway): the cleanup and an open history then read the
+	/// records again (`AppModel.afterOperationRecorded`). A recheck that found the store unchanged or refused records nothing.
+	var mayHaveRecorded: Bool { operation != nil || error != nil }
+
 	/// Anything but a clean write — the folder written and still holding it, Finder back or never quit — brings the
 	/// window forward. A restart that found the file already the same is clean too: the folder shows the preset again.
 	var needsAttention: Bool {
@@ -358,11 +362,11 @@ struct QuickApplyWrite: Sendable {
 		switch recheck {
 		case .unchanged(let windowKnown)?:
 			guard finder == .restarted(back: true) else {
-				return String(localized: "빠른 적용: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같아 쓰지 않았습니다.") + " " + failedLaunch
+				return String(localized: "빠른 적용: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같아 쓰지 않았습니다.") + " " + failedLaunch
 			}
 			return windowKnown
-				? String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
-				: String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\"과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
+				? String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
+				: String(localized: "완료: \(name)의 보기 설정 파일은 이미 \"\(preset)\" 프리셋과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다.")
 		case .refused(let refusal)?:
 			return refusal.message + " " + (finder == .restarted(back: true) ? String(localized: "Finder를 다시 시작했습니다.") : failedLaunch)
 		case .changed?, nil:
@@ -684,7 +688,7 @@ extension AppModel {
 			case .refused(let refusal):
 				self.refuseQuickApply(refusal)
 			case .alreadyMatching(let preset):
-				self.status = String(localized: "\(name)은(는) 이미 \"\(Fmt.name(preset.name))\"과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다.")
+				self.status = String(localized: "\(name)은(는) 이미 \"\(Fmt.name(preset.name))\" 프리셋과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다.")
 				FinderServiceProvider.shared.showWindow()
 			case .apply(let preset, let plan):
 				guard mayQuitFinder() else { return }
@@ -824,7 +828,7 @@ extension AppModel {
 					self.reportQuickRefusal(self.status)
 				}
 				if write.needsAttention { FinderServiceProvider.shared.showWindow() }
-				self.afterOperationRecorded()
+				if write.mayHaveRecorded { self.afterOperationRecorded() }
 			}
 		}
 	}

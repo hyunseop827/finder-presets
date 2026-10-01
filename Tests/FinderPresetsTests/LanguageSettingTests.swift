@@ -58,15 +58,18 @@ import Testing
 
 	@Test func writingAndReadingTheChoice() {
 		let store = Store()
-		let setting = store.setting(system: ["ko-KR", "en-GB"])
-		#expect(setting.choice == .system && !setting.needsRelaunch(current: "ko") && setting.needsRelaunch(current: "en"))
+		let system = ["ko-KR", "en-GB"]
+		let setting = store.setting(system: system)
+		#expect(setting.choice == .system && !setting.choice.needsRelaunch(system: system, current: "ko")
+		        && setting.choice.needsRelaunch(system: system, current: "en"))
 
 		setting.set(.english)
 		#expect(store.current as? [String] == ["en-GB"] && setting.choice == .english)
-		#expect(setting.needsRelaunch(current: "ko") && !setting.needsRelaunch(current: "en"))
+		#expect(setting.choice.needsRelaunch(system: system, current: "ko") && !setting.choice.needsRelaunch(system: system, current: "en"))
 
 		setting.set(.korean)
 		#expect(store.current as? [String] == ["ko-KR"] && setting.choice == .korean)
+		#expect(!setting.choice.needsRelaunch(system: system, current: "ko") && setting.choice.needsRelaunch(system: system, current: "en"))
 
 		// "시스템 설정 따름" removes the key (nothing stored at all, not an empty list).
 		setting.set(.system)

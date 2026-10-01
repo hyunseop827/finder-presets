@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Runs the unit tests (FinderPresetsCoreTests and FinderPresetsTests). `swift test` builds the whole package (including the SwiftUI app), so the
+# Runs the unit tests (FinderPresetsCoreTests, FinderPresetsTests and FinderPresetsCLITests). `swift test` builds the whole package (including the SwiftUI app), so the
 # SwiftUI macro plugin from Xcode is needed when building with the Command Line Tools toolchain.
 set -e
 cd "$(dirname "$0")/.."

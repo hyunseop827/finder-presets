@@ -99,7 +99,7 @@ enum SelfTest {
 			log("status: \(model.status)")
 			guard let pending = model.pendingApply else { fail("nothing to apply") }
 			guard pending.roots.map(\.path) == [targetPath] else { fail("unexpected roots \(pending.roots.map(\.path))") }
-			log("pending changes: \(pending.plan.changes.count) folders, stores: \(pending.plan.changesByStore.count), roots: \(pending.roots.map(\.lastPathComponent))")
+			log("pending changes: \(pending.plan.changes.count) folders, roots: \(pending.roots.map(\.lastPathComponent))")
 
 			// 4. confirm — the automatic cleanup runs after every recorded operation, in the background.
 			let cleanupsBefore = model.retentionRuns
@@ -402,7 +402,7 @@ enum SelfTest {
 		}
 		check(details.preset != nil && details.preset == applied.presetSnapshot,
 		      "the selected record's preset is the one its manifest recorded: \(String(describing: details.preset))")
-		check(PresetPreview.make(settings: details.preset ?? ViewSettings(), globals: model.globals, locale: AppLanguage.locale,
+		check(PresetPreview.make(settings: details.preset ?? ViewSettings(), defaults: model.previewDefaults, locale: AppLanguage.locale,
 		                         now: Date()).summary.isEmpty == false, "the preset draws a preview")
 		check(details.folders.total == item.folderCount && details.folders.shown.contains { FolderRule.normalize($0.path) == bPath },
 		      "the folder list holds the changed folders: \(details.folders.shown.map(\.path))")
@@ -988,7 +988,7 @@ enum SelfTest {
 		// Pressed again: already the same, nothing recorded, Finder left alone.
 		model.quickApply(to: folderPath)
 		await waitIdle()
-		check(model.status == String(localized: "\(name)은(는) 이미 \"\(Fmt.name(quick.name))\"과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다.")
+		check(model.status == String(localized: "\(name)은(는) 이미 \"\(Fmt.name(quick.name))\" 프리셋과 같아 바꿀 것이 없습니다. Finder는 다시 시작하지 않았습니다.")
 		      && model.undoShortcutID == nil, "quick preset pressed again: \(model.status)")
 		log("quick preset: \(op.id.uuidString.prefix(8)) recorded (the refusal alert closed by that press), second press unchanged")
 		return ok

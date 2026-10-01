@@ -5,7 +5,6 @@ let package = Package(
 	name: "FinderPresets",
 	platforms: [.macOS(.v14)],
 	products: [
-		.library(name: "FinderPresetsCore", targets: ["FinderPresetsCore"]),
 		.executable(name: "finder-presets", targets: ["finder-presets"]),
 		.executable(name: "FinderPresets", targets: ["FinderPresets"])
 	],
@@ -27,14 +26,19 @@ let package = Package(
 		),
 		.testTarget(
 			name: "FinderPresetsCoreTests",
-			dependencies: ["FinderPresetsCore"],
+			dependencies: ["FinderPresetsCore", .product(name: "DSStore", package: "DSStore")],
 			resources: [.copy("Fixtures")]
 		),
 		// The app's models and helpers (no window is opened): status line, layout budget, preset editor and preview, history and
 		// undo, Finder restarts, services and the quick preset, localization.
 		.testTarget(
 			name: "FinderPresetsTests",
-			dependencies: ["FinderPresets"]
+			dependencies: ["FinderPresets", .product(name: "DSStore", package: "DSStore")]
+		),
+		// The dev CLI's argument parsing (Sources/finder-presets/Arguments.swift); no command is run.
+		.testTarget(
+			name: "FinderPresetsCLITests",
+			dependencies: ["finder-presets", "FinderPresetsCore"]
 		)
 	]
 )

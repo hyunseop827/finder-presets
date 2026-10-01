@@ -193,18 +193,13 @@ import Testing
 		#expect(guide.step == 0)
 	}
 
-	/// There is nothing in the model that could advance the walkthrough by itself: it holds whether the sheet is open, the
-	/// step, the shortcut state and the reader of that state — no timer, no task, no play state (the sheet once played
-	/// like a short video; it now moves only with "이전"·"다음" and ← →).
+	/// There is nothing in the model that could advance the walkthrough by itself: none of what it stores is a timer or a
+	/// task (the sheet once played like a short video; it now moves only with "이전"·"다음" and ← →). Checked by type, so
+	/// a timer or task that is still nil (`Optional<NSTimer>`) counts too, while any other new property is fine.
 	@MainActor @Test func theWalkthroughHasNoTimer() {
 		let guide = ShortcutGuide(readState: { .notAssigned })
-		// `@Observable` keeps a tracked property `x` as `_x`, beside its `_$observationRegistrar`.
-		let stored = Set(Mirror(reflecting: guide).children.compactMap { child -> String? in
-			guard let label = child.label, label != "_$observationRegistrar" else { return nil }
-			return label.hasPrefix("_") ? String(label.dropFirst()) : label
-		})
-		#expect(stored == ["isOpen", "step", "shortcut", "readState"])
-		#expect(!Mirror(reflecting: guide).children.contains { $0.value is Timer || String(describing: type(of: $0.value)).contains("Task<") })
+		let types = Mirror(reflecting: guide).children.map { String(describing: type(of: $0.value)) }
+		#expect(!types.isEmpty && !types.contains { $0.contains("Timer") || $0.contains("Task<") }, "\(types)")
 	}
 
 	/// `status(keyEquivalent:…)` builds what macOS writes, so the development hooks and these tests speak the same shape.

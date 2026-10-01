@@ -181,8 +181,8 @@ import FinderPresetsCore
 		for (entry, service) in zip(services, FinderService.allCases) {
 			#expect(entry["NSMessage"] as? String == service.message)
 			#expect((entry["NSMenuItem"] as? [String: String]) == ["default": service.englishTitle])
-			#expect(entry["NSSendFileTypes"] as? [String] == service.sendFileTypes)
-			#expect((service == .quickApply) == (service.sendFileTypes == nil))
+			// Folders only, not packages or files; none at all for the quick preset (offered with or without a selection).
+			#expect(entry["NSSendFileTypes"] as? [String] == (service == .quickApply ? nil : ["public.folder"]))
 			#expect((entry["NSMenuItem"] as? [String: String])?["keyEquivalent"] == nil && entry["NSKeyEquivalent"] == nil)
 			#expect((entry["NSRequiredContext"] as? [String: Any])?.isEmpty == true)
 			#expect(entry["NSSendTypes"] == nil && entry["NSReturnTypes"] == nil && entry["NSPortName"] == nil)

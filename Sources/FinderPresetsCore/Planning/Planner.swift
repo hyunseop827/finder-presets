@@ -64,11 +64,6 @@ public struct Plan: Sendable, Equatable {
 	/// How many folders get their icon positions reset (`PlanEntry.resetsIconPositions`): with a view change, or alone
 	/// (`PlanCategory.iconPositionsOnly`, not among `changes`).
 	public var iconPositionResets: Int { entries.filter { $0.resetsIconPositions && ($0.category == .willChange || $0.category == .iconPositionsOnly) }.count }
-
-	/// Entries grouped by the parent .DS_Store they will modify.
-	public var changesByStore: [URL: [PlanEntry]] {
-		Dictionary(grouping: changes) { $0.location!.storeURL }
-	}
 }
 
 public struct PlanOptions: Sendable, Equatable {
@@ -104,7 +99,8 @@ public struct Planner: Sendable {
 
 	public init(presets: [Preset], resolver: RuleResolver, globals: GlobalDefaults, options: PlanOptions = .init(),
 	            home: URL = FileManager.default.homeDirectoryForCurrentUser) {
-		self.presets = Dictionary(uniqueKeysWithValues: presets.map { ($0.id, $0) })
+		// The first of presets that share an ID wins (a preset file copied in Finder keeps the ID inside it).
+		self.presets = Dictionary(presets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 		self.resolver = resolver
 		self.globals = globals
 		self.options = options

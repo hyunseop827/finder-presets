@@ -6,7 +6,6 @@ import FinderPresetsCore
 
 let dirs = AppDirectories.standard   // honours FINDER_PRESETS_DATA_DIR
 let presetStore = PresetStore(dirs: dirs)
-let ruleStore = RuleStore(dirs: dirs)
 let opStore = OperationStore(dirs: dirs)
 let globals = GlobalDefaults.readCurrent()
 
@@ -17,10 +16,10 @@ func usage() -> Never {
 	  show <folder>                         현재 보기 설정 (폴더 고유 / 상속)
 	  preset-from <folder> <name>           폴더의 현재 설정을 프리셋으로 저장
 	  preset-set <name> key=value ...       프리셋 필드 수정 (viewStyle=icon|list|column|gallery, groupBy=kind, icon.iconSize=88, icon.arrangeBy=name, list.sortColumn=dateModified, list.sortAscending=false ...)
-	                                        groupBy: none, kind, application, dateLastOpened, dateAdded, dateModified, dateCreated, size (Finder 문자열 "Kind" 등도 받음). 값 "-" 는 유지
+	                                        groupBy: none, kind, application, dateLastOpened, dateAdded, dateModified, dateCreated, size (Finder 문자열 "Kind" 등도 받음). 값 "-" (또는 빈 값)은 유지
+	                                        쓸 수 없는 값, 알 수 없는 키, key=value 가 아닌 인자가 하나라도 있으면 저장하지 않는다
 	  presets                               프리셋 목록
 	  preset-export <name> <file.json> / preset-import <file.json>
-	  rule-set <folder> <preset> [--no-subfolders] / rule-clear <folder> / rules
 	  analyze <preset> <root>... [--depth N] [--pin-defaults]
 	  apply <preset> <root>... [--depth N] [--pin-defaults] [--relaunch]
 	                                        --relaunch: Finder를 종료한 뒤 쓰고 다시 실행한다 (종료되지 않으면 쓰지 않음). 열려 있던 Finder 창은 다시 연다
@@ -81,18 +80,13 @@ func loadPreset(_ name: String) throws -> Preset {
 }
 
 func makePlan(presetName: String, args: [String]) throws -> (Preset, Plan) {
-	var roots: [URL] = []
-	var depth: Int? = nil
-	var pin = false
-	var it = args.makeIterator()
-	while let a = it.next() {
-		switch a {
-		case "--depth": depth = Int(it.next() ?? "") ?? nil
-		case "--pin-defaults": pin = true
-		case "--relaunch": break
-		default: roots.append(folderURL(a))
-		}
+	let parsed: PlanArguments
+	do { parsed = try parsePlanArguments(args) } catch {
+		print(error.message)
+		if case .unknown = error { usage() }
+		exit(2)
 	}
+	let roots = parsed.roots.map(folderURL)
 	guard !roots.isEmpty else { usage() }
 	// With subfolders the scan would reach every folder of the home folder (Desktop included); only the root itself is unsupported.
 	let tooWide = roots.filter { HomeFolders.isHomeOrAncestor($0.path) }
@@ -101,11 +95,10 @@ func makePlan(presetName: String, args: [String]) throws -> (Preset, Plan) {
 		exit(1)
 	}
 	let preset = try loadPreset(presetName)
-	let rules = try ruleStore.load()
-	let presets = try presetStore.list()
-	let resolver = RuleResolver(rules: rules.rules, defaultPresetID: preset.id)
-	let planner = Planner(presets: presets, resolver: resolver, globals: globals, options: PlanOptions(pinInheritedDefaults: pin))
-	let scanned = FolderScanner(options: ScanOptions(maxDepth: depth, excludedPaths: ScanOptions.defaultExclusions())).scan(roots: roots)
+	// The preset for every folder, as the app plans (no folder rules).
+	let resolver = RuleResolver(rules: [], defaultPresetID: preset.id)
+	let planner = Planner(presets: [preset], resolver: resolver, globals: globals, options: PlanOptions(pinInheritedDefaults: parsed.pinDefaults))
+	let scanned = FolderScanner(options: ScanOptions(maxDepth: parsed.depth, excludedPaths: ScanOptions.defaultExclusions())).scan(roots: roots)
 	return (preset, planner.plan(scanned: scanned, roots: roots))
 }
 
@@ -121,11 +114,6 @@ func printPlan(_ plan: Plan) {
 		let indent = String(repeating: "  ", count: e.depth)
 		var line = "\(indent)\(e.folder.lastPathComponent)  [\(e.category.rawValue)]"
 		if let r = e.reason { line += " \(r)" }
-		switch e.ruleSource {
-		case .exactRule: line += " (규칙)"
-		case .inheritedRule(_, let from): line += " (상속: \(URL(fileURLWithPath: from).lastPathComponent))"
-		default: break
-		}
 		if !e.diffs.isEmpty { line += "  " + e.diffs.map { "\($0.field): \($0.current ?? "미설정") → \($0.target)" }.joined(separator: ", ") }
 		if e.resetsIconPositions { line += "  (아이콘 자리 새로 잡음)" }
 		print(line)
@@ -245,14 +233,7 @@ func protectionText(_ p: RetentionPlan.Protection) -> String {
 	}
 }
 
-/// "48", "48.5" (Int(d) traps beyond Int's range: only small whole numbers are printed as integers).
-func number(_ d: Double) -> String { d == d.rounded() && abs(d) < 1e15 ? String(Int(d)) : String(d) }
-
-func days(_ interval: TimeInterval) -> String {
-	let d = interval / 86400
-	// Int(d) traps beyond Int's range: only small whole numbers are printed as integers.
-	return d == d.rounded() && abs(d) < 1e15 ? String(Int(d)) : String(format: "%.1f", d)
-}
+func days(_ interval: TimeInterval) -> String { number(interval / 86400) { String(format: "%.1f", $0) } }
 
 @MainActor func printRetention(_ plan: RetentionPlan) {
 	let p = plan.policy
@@ -309,56 +290,9 @@ do {
 		guard args.count >= 3 else { usage() }
 		var p = try loadPreset(args[1])
 		for kv in args.dropFirst(2) {
-			let parts = kv.split(separator: "=", maxSplits: 1).map(String.init)
-			guard parts.count == 2 else { continue }
-			let (k, v) = (parts[0], parts[1])
-			// A number is checked against the app editor's ranges (PresetLimits), but refused rather than clamped as the
-			// editor does: a script gets an error instead of a value it did not ask for.
-			// "-" (or nothing) leaves the option alone.
-			let limits: (range: ClosedRange<Double>?, sizes: [Double]?, whole: Bool)? = switch k {
-				case "icon.iconSize": (PresetLimits.iconSize, nil, false)
-				case "icon.textSize", "list.textSize": (PresetLimits.textSize, nil, true)
-				case "icon.gridSpacing": (PresetLimits.gridSpacing, nil, false)
-				case "list.iconSize": (nil, PresetLimits.listIconSizes, false)
-				default: nil
-			}
-			if let limits, !v.isEmpty, v != "-" {
-				let allowed = limits.range.map { "\(number($0.lowerBound))–\(number($0.upperBound))" }
-					?? (limits.sizes ?? []).map(number).joined(separator: " 또는 ")
-				guard let n = Double(v), n.isFinite, limits.range.map({ $0.contains(n) }) ?? true, limits.sizes.map({ $0.contains(n) }) ?? true,
-				      !limits.whole || n == n.rounded() else {
-					print("오류: \(k)=\(v) 은(는) 쓸 수 없습니다 (\(allowed)\(limits.whole ? " 사이의 정수" : "")). 저장하지 않았습니다.")
-					exit(1)
-				}
-			}
-			let d = Double(v); let b = Bool(v)
-			switch k {
-			case "viewStyle": p.settings.viewStyle = ViewStyle.allCases.first { "\($0)" == v } ?? ViewStyle(rawValue: v)
-			case "groupBy":
-				// The case name ("dateModified") or Finder's own string ("Date Modified"); "-" (or nothing) is "유지".
-				if v.isEmpty || v == "-" {
-					p.settings.groupBy = nil
-				} else if let g = GroupBy.allCases.first(where: { "\($0)" == v }) ?? GroupBy(rawValue: v) {
-					p.settings.groupBy = g
-				} else {
-					print("오류: groupBy=\(v) 은(는) 쓸 수 없습니다 (\(GroupBy.allCases.map { "\($0)" }.joined(separator: ", "))). 저장하지 않았습니다.")
-					exit(1)
-				}
-			case "icon.iconSize": p.settings.icon.iconSize = d
-			case "icon.textSize": p.settings.icon.textSize = d
-			case "icon.gridSpacing": p.settings.icon.gridSpacing = d
-			case "icon.labelOnBottom": p.settings.icon.labelOnBottom = b
-			case "icon.showItemInfo": p.settings.icon.showItemInfo = b
-			case "icon.showIconPreview": p.settings.icon.showIconPreview = b
-			case "icon.arrangeBy": p.settings.icon.arrangeBy = SortKey(rawValue: v)
-			case "list.textSize": p.settings.list.textSize = d
-			case "list.iconSize": p.settings.list.iconSize = d
-			case "list.sortColumn": p.settings.list.sortColumn = ListColumn(rawValue: v)
-			case "list.sortAscending": p.settings.list.sortAscending = b
-			case "list.showIconPreview": p.settings.list.showIconPreview = b
-			case "list.useRelativeDates": p.settings.list.useRelativeDates = b
-			case "list.calculateAllSizes": p.settings.list.calculateAllSizes = b
-			default: print("알 수 없는 키: \(k)")
+			do { try setPresetField(kv, in: &p.settings) } catch {
+				print("오류: \(error.message). 저장하지 않았습니다.")
+				exit(1)
 			}
 		}
 		if p.settings.list.hasDanglingSortDirection {
@@ -382,28 +316,6 @@ do {
 		guard args.count >= 2 else { usage() }
 		let p = try presetStore.importPreset(from: folderURL(args[1]))
 		print("가져옴: \(p.name) — \(fmt(p.settings))")
-
-	case "rule-set":
-		guard args.count >= 3 else { usage() }
-		var doc = try ruleStore.load()
-		let preset = try loadPreset(args[2])
-		let path = FolderRule.normalize(folderURL(args[1]).path)
-		doc.rules.removeAll { $0.path == path }
-		doc.rules.append(FolderRule(path: path, presetID: preset.id, appliesToSubfolders: !args.contains("--no-subfolders")))
-		try ruleStore.save(doc)
-		print("규칙: \(path) → \(preset.name)")
-
-	case "rule-clear":
-		guard args.count >= 2 else { usage() }
-		var doc = try ruleStore.load()
-		let path = FolderRule.normalize(folderURL(args[1]).path)
-		doc.rules.removeAll { $0.path == path }
-		try ruleStore.save(doc)
-
-	case "rules":
-		let doc = try ruleStore.load()
-		let presets = Dictionary(uniqueKeysWithValues: try presetStore.list().map { ($0.id, $0.name) })
-		for r in doc.rules { print("\(r.path) → \(presets[r.presetID] ?? "?")\(r.appliesToSubfolders ? " (하위 포함)" : "")") }
 
 	case "analyze":
 		guard args.count >= 3 else { usage() }

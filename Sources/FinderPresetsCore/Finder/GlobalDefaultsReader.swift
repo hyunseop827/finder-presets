@@ -5,16 +5,13 @@ public struct GlobalDefaults: @unchecked Sendable {
 	public var preferredViewStyle: ViewStyle?
 	public var iconPlist: [String: Any]
 	public var listArrayPlist: [String: Any]
-	public var listDictPlist: [String: Any]
 
 	public init(preferredViewStyle: ViewStyle? = nil,
 	            iconPlist: [String: Any] = ViewRecordCodec.factoryIconPlist,
-	            listArrayPlist: [String: Any] = ViewRecordCodec.factoryListPlist,
-	            listDictPlist: [String: Any]? = nil) {
+	            listArrayPlist: [String: Any] = ViewRecordCodec.factoryListPlist) {
 		self.preferredViewStyle = preferredViewStyle
 		self.iconPlist = iconPlist
 		self.listArrayPlist = listArrayPlist
-		self.listDictPlist = listDictPlist ?? ViewRecordCodec.dictForm(ofList: listArrayPlist)
 	}
 
 	/// The effective settings a folder without explicit records gets. No grouping: whether Finder shows a folder without a
@@ -25,7 +22,7 @@ public struct GlobalDefaults: @unchecked Sendable {
 	}
 
 	public var recordBases: RecordBases {
-		RecordBases(icon: iconPlist, listArray: listArrayPlist, listDict: listDictPlist)
+		RecordBases(icon: iconPlist, listArray: listArrayPlist)
 	}
 
 	public static let factory = GlobalDefaults()
@@ -34,14 +31,22 @@ public struct GlobalDefaults: @unchecked Sendable {
 	public static func readCurrent() -> GlobalDefaults {
 		typealias W = GlobalDefaultsWriter
 		guard let d = UserDefaults(suiteName: W.finderDomain) else { return .factory }
-		let style = (d.string(forKey: W.viewStyleKey)).flatMap(ViewStyle.init(rawValue:))
-		let svs = d.dictionary(forKey: W.standardViewSettingsKey) ?? [:]
+		return GlobalDefaults(viewStyle: d.string(forKey: W.viewStyleKey), standardViewSettings: d.dictionary(forKey: W.standardViewSettingsKey))
+	}
+
+	/// The defaults the domain's two values describe (string-typed numbers accepted), on top of Finder's factory values.
+	init(viewStyle: String?, standardViewSettings svs: [String: Any]?) {
+		typealias W = GlobalDefaultsWriter
 		var icon = ViewRecordCodec.factoryIconPlist
-		if let i = svs[W.iconSectionKey] as? [String: Any] { icon.merge(ViewRecordCodec.sanitizeIconPlist(i)) { _, new in new } }
+		if let i = svs?[W.iconSectionKey] as? [String: Any] { icon.merge(ViewRecordCodec.sanitizeIconPlist(i)) { _, new in new } }
 		var listArray = ViewRecordCodec.factoryListPlist
-		if let l = svs[W.listArraySectionKey] as? [String: Any] { listArray.merge(ViewRecordCodec.sanitizeListPlist(l)) { _, new in new } }
-		var listDict: [String: Any]? = nil
-		if let l = svs[W.listDictSectionKey] as? [String: Any] { listDict = ViewRecordCodec.sanitizeListPlist(l) }
-		return GlobalDefaults(preferredViewStyle: style, iconPlist: icon, listArrayPlist: listArray, listDictPlist: listDict)
+		if let l = svs?[W.listArraySectionKey] as? [String: Any] {
+			listArray.merge(ViewRecordCodec.sanitizeListPlist(l)) { _, new in new }
+		} else if let l = svs?[W.listDictSectionKey] as? [String: Any] {
+			// Only the dict-form section: the list options are taken from it, never left at the factory values (the rule
+			// `GlobalDefaultsWriter.plannedValues` and `StoreEditor.apply` use too).
+			listArray.merge(ViewRecordCodec.arrayForm(ofList: ViewRecordCodec.sanitizeListPlist(l))) { _, new in new }
+		}
+		self.init(preferredViewStyle: viewStyle.flatMap(ViewStyle.init(rawValue:)), iconPlist: icon, listArrayPlist: listArray)
 	}
 }

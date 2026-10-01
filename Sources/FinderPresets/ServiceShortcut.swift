@@ -137,6 +137,7 @@ struct ServiceShortcut: Sendable {
 		return key.isLetter ? key.uppercased() : String(key)
 	}
 
+	#if DEBUG
 	// MARK: For the tests and the development hooks
 
 	/// A status dictionary like the one macOS writes, with one entry for the quick preset's service.
@@ -148,7 +149,6 @@ struct ServiceShortcut: Sendable {
 		return ["\(bundleID) - \(title) - \(message)": entry]
 	}
 
-	#if DEBUG
 	/// What `--selftest` and `--layout-probe` read instead of the real `pbs` domain (a development run reads no domain of
 	/// the system). The layout probe puts each state in it in turn.
 	final class Development: @unchecked Sendable {

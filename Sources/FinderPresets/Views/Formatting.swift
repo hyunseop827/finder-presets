@@ -3,7 +3,7 @@ import AppKit
 import FinderPresetsCore
 
 enum Fmt {
-	/// A view style's name ("유지" when the preset leaves it alone). Also the preset editor's segments.
+	/// A view style's name ("유지" when the preset leaves it alone).
 	static func style(_ s: ViewStyle?) -> String {
 		switch s {
 		case .icon?: String(localized: "아이콘")
@@ -114,7 +114,7 @@ enum Fmt {
 struct SettingsSummary: View {
 	let settings: ViewSettings
 
-	typealias Item = (short: String, long: String, value: String, kept: Bool)
+	typealias Item = (short: String, value: String, kept: Bool)
 
 	/// Row by row: 보기 | 정렬, 아이콘 | 목록, 레이블 | 정보·미리보기.
 	static func items(_ s: ViewSettings) -> [Item] {
@@ -125,15 +125,15 @@ struct SettingsSummary: View {
 		let listOthers = listExtras(s.list)
 		let listValue = more(listMain, listOthers, alone: String(localized: "옵션 \(listOthers)개"))
 		let infoKept = s.icon.showItemInfo == nil && s.icon.showIconPreview == nil
-		let label = s.icon.labelOnBottom.map { $0 ? String(localized: "하단") : String(localized: "오른쪽") } ?? Fmt.keep
+		let label = s.icon.labelOnBottom.map { $0 ? String(localized: "아래") : String(localized: "오른쪽") } ?? Fmt.keep
 		let styleValue = more(s.viewStyle.map { Fmt.style($0) }, s.groupBy == nil ? 0 : 1, alone: String(localized: "그룹 \(Fmt.group(s.groupBy))"))
 		return [
-			(String(localized: "보기"), String(localized: "보기 방식"), styleValue, s.viewStyle == nil && s.groupBy == nil),
-			(String(localized: "정렬"), String(localized: "정렬 기준"), Fmt.sort(s.icon.arrangeBy), s.icon.arrangeBy == nil),
-			(String(localized: "아이콘"), String(localized: "아이콘 보기"), iconValue, iconMain == nil && s.icon.gridSpacing == nil),
-			(String(localized: "목록"), String(localized: "목록 보기"), listValue, listMain == nil && listOthers == 0),
-			(String(localized: "레이블"), String(localized: "레이블 위치"), label, s.icon.labelOnBottom == nil),
-			(String(localized: "정보·미리보기"), String(localized: "항목 정보 / 미리보기"), pair(Fmt.onOff(s.icon.showItemInfo), Fmt.onOff(s.icon.showIconPreview), kept: infoKept), infoKept)
+			(String(localized: "보기"), styleValue, s.viewStyle == nil && s.groupBy == nil),
+			(String(localized: "정렬"), Fmt.sort(s.icon.arrangeBy), s.icon.arrangeBy == nil),
+			(String(localized: "아이콘"), iconValue, iconMain == nil && s.icon.gridSpacing == nil),
+			(String(localized: "목록"), listValue, listMain == nil && listOthers == 0),
+			(String(localized: "레이블"), label, s.icon.labelOnBottom == nil),
+			(String(localized: "정보·미리보기"), pair(Fmt.onOff(s.icon.showItemInfo), Fmt.onOff(s.icon.showIconPreview), kept: infoKept), infoKept)
 		]
 	}
 
@@ -155,7 +155,7 @@ struct SettingsSummary: View {
 	/// grid, a preset row's line) and what VoiceOver reads.
 	static func details(_ s: ViewSettings) -> [String] {
 		let icon = String(localized: "아이콘 보기"), list = String(localized: "목록 보기")
-		let label = s.icon.labelOnBottom.map { $0 ? String(localized: "하단") : String(localized: "오른쪽") }
+		let label = s.icon.labelOnBottom.map { $0 ? String(localized: "아래") : String(localized: "오른쪽") }
 		let all: [(String, String?)] = [
 			(String(localized: "보기 방식"), s.viewStyle.map { Fmt.style($0) }),
 			(String(localized: "그룹 기준"), s.groupBy.map { Fmt.group($0) }),

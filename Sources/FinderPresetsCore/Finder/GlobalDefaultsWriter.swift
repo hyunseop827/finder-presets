@@ -107,12 +107,8 @@ public enum GlobalDefaultsWriter {
 			// list view (the same rule the reader and StoreEditor use).
 			let existingArray = (svs[listArraySectionKey] as? [String: Any]).map(ViewRecordCodec.sanitizeListPlist)
 			let existingDict = (svs[listDictSectionKey] as? [String: Any]).map(ViewRecordCodec.sanitizeListPlist)
-			var arrayBase = ViewRecordCodec.factoryListPlist
-			if existingArray == nil, let dict = existingDict {
-				arrayBase = dict
-				if let cols = dict["columns"] as? [String: [String: Any]] { arrayBase["columns"] = ViewRecordCodec.arrayColumns(fromDict: cols) }
-			}
-			let mergedArray = ViewRecordCodec.mergeList(settings.list, into: existingArray, base: arrayBase)
+			let mergedArray = ViewRecordCodec.mergeList(settings.list, into: existingArray ?? existingDict.map(ViewRecordCodec.arrayForm(ofList:)),
+			                                             base: ViewRecordCodec.factoryListPlist)
 			svs[listArraySectionKey] = mergedArray
 			svs[listDictSectionKey] = ViewRecordCodec.mergeList(settings.list, into: existingDict, base: ViewRecordCodec.dictForm(ofList: mergedArray))
 		}

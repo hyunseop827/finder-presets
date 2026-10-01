@@ -50,11 +50,6 @@ enum FinderService: String, CaseIterable, Sendable {
 	/// The title Finder shows, in the app's language (the bundle's ServicesMenu.strings; the English default outside
 	/// the app bundle). The guide names the menu items with it.
 	var localizedTitle: String { Bundle.main.localizedString(forKey: englishTitle, value: englishTitle, table: "ServicesMenu") }
-
-	/// The only file type Finder offers them for (`NSSendFileTypes`): folders, not packages or files. None for the quick
-	/// preset: a service without send types is offered in every app with or without a selection, so its shortcut works
-	/// wherever the user presses it.
-	var sendFileTypes: [String]? { self == .quickApply ? nil : ["public.folder"] }
 }
 
 /// A service request's items, sorted out before anything is done: the folders in the order they came, each once, and
@@ -118,14 +113,11 @@ final class FinderServiceProvider: NSObject {
 	weak var mainWindow: NSWindow?
 	/// Opens the main window again after it was closed (MainView, from its `openWindow`).
 	var openMainWindow: (() -> Void)?
-	/// Requests that arrived before the model was attached.
-	private var waiting: [(FinderService, ServiceItems)] = []
 
+	/// From FinderPresetsApp's `init`, which runs before the AppDelegate makes this the services provider
+	/// (`applicationWillFinishLaunching`): no request arrives without a model.
 	func attach(_ model: AppModel) {
 		self.model = model
-		let queued = waiting
-		waiting = []
-		for (service, items) in queued { run(service, items, model: model) }
 	}
 
 	// `<NSMessage>:userData:error:`, one per service (Info.plist).
@@ -151,20 +143,16 @@ final class FinderServiceProvider: NSObject {
 		#if DEBUG
 		// The self-test and the layout probe check exact states; a request from Finder meanwhile would change them.
 		if SelfTest.isRequested || LayoutProbe.isRequested {
-			error.pointee = String(localized: "셀프테스트와 레이아웃 점검 중에는 Finder 서비스를 받지 않습니다.") as NSString
+			error.pointee = "셀프테스트와 레이아웃 점검 중에는 Finder 서비스를 받지 않습니다." as NSString   // l10n-exempt: debug builds only
 			return
 		}
 		#endif
 		// The quick preset's pasteboard holds nothing it uses (whatever the app it was pressed in put there).
 		let items = service == .quickApply ? ServiceItems() : ServiceItems.read(pboard)
-		guard let model else {
-			waiting.append((service, items))
-			return
-		}
+		guard let model else { return }   // never: the model is attached before this is the services provider (`attach`)
 		if let reply = run(service, items, model: model) { error.pointee = reply as NSString }
 	}
 
-	@discardableResult
 	private func run(_ service: FinderService, _ items: ServiceItems, model: AppModel) -> String? {
 		// The quick preset leaves the user in Finder: the window comes forward only with something to read. Its refusal
 		// alert does not stop the next press (`AppModel.quickApplyGate`), so the sheet of the error alert is left out here.
@@ -307,7 +295,8 @@ extension AppModel {
 			status = Self.additionNote(result)
 			return result.inList.isEmpty ? status : nil
 		case .makePresets:
-			return makePresetsFromFinder(items.folders)
+			// One preset per folder, exactly like a drop on the preset list; the last one is selected.
+			return makePresets(from: items.folders)
 		case .apply:
 			return applyFromFinder(items.folders, blocker: blocker)
 		case .quickApply:
@@ -328,33 +317,6 @@ extension AppModel {
 		if r.inList.isEmpty { parts.append(String(localized: "폴더를 목록에 추가하지 않았습니다.")) }
 		if !r.refused.isEmpty { parts.append(String(localized: "홈 폴더나 그 상위 폴더라 넣지 않음: \(Fmt.name(r.refused.joined(separator: ", ")))")) }
 		return parts.joined(separator: " · ")
-	}
-
-	/// Service 2: one preset per folder, exactly like a drop on the preset list; the last one is selected. Folders that
-	/// cannot be read are reported together, the others still become presets.
-	private func makePresetsFromFinder(_ folders: [URL]) -> String? {
-		var made: [Preset] = []
-		var defaultsOnly: [String] = []
-		var failures: [String] = []
-		for folder in folders {
-			do {
-				let result = try makePreset(from: folder)
-				made.append(result.preset)
-				if !result.ownSettings { defaultsOnly.append(folder.lastPathComponent) }
-			} catch {
-				failures.append("\(folder.lastPathComponent): \(ErrorText.describe(error))")
-			}
-		}
-		if !failures.isEmpty {
-			report(String(localized: "프리셋을 만들지 못한 폴더:") + "\n" + failures.joined(separator: "\n"))
-		}
-		guard !made.isEmpty else {
-			status = String(localized: "Finder의 폴더로 프리셋을 만들지 못했습니다.")
-			return status
-		}
-		status = String(localized: "Finder의 폴더로 프리셋 \(made.count)개를 만들었습니다: \(Fmt.name(made.map(\.name).joined(separator: ", ")))")
-			+ (defaultsOnly.isEmpty ? "" : " · " + String(localized: "고유 설정이 없어 Finder 기본값을 저장: \(Fmt.name(defaultsOnly.joined(separator: ", ")))"))
-		return nil
 	}
 
 	/// Service 3: the folders join the list and exactly their rows are selected; then "선택한 폴더에 적용…" for them, which

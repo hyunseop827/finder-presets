@@ -20,18 +20,16 @@ public enum StoreEditorError: Error, LocalizedError, Sendable {
 	}
 }
 
-/// Base plists used when a folder has no icon/list record yet (normally taken from Finder's global defaults).
+/// Base plists used when a folder has no icon/list record yet (normally taken from Finder's global defaults). A new
+/// `lsvp` is made from the folder's `lsvC` (`StoreEditor.apply`), so there is no base of its own.
 public struct RecordBases: @unchecked Sendable {
 	public var icon: [String: Any]
 	public var listArray: [String: Any]   // for lsvC / lsvP
-	public var listDict: [String: Any]    // for lsvp
 
 	public init(icon: [String: Any] = ViewRecordCodec.factoryIconPlist,
-	            listArray: [String: Any] = ViewRecordCodec.factoryListPlist,
-	            listDict: [String: Any]? = nil) {
+	            listArray: [String: Any] = ViewRecordCodec.factoryListPlist) {
 		self.icon = icon
 		self.listArray = listArray
-		self.listDict = listDict ?? ViewRecordCodec.dictForm(ofList: listArray)
 	}
 }
 
@@ -43,9 +41,23 @@ public enum StoreEditor {
 	}
 
 	public static func read(_ url: URL) throws -> ReadResult {
-		guard FileManager.default.fileExists(atPath: url.path) else { return .absent }
+		try readContents(url).result
+	}
+
+	/// `read`, with the bytes the store was parsed from (nil when there is no file): a write path backs up these very
+	/// bytes (`OperationStore.backup(store:contents:for:suffix:)`), so the backup is the state it changed and the file is
+	/// read once.
+	static func readContents(_ url: URL) throws -> (result: ReadResult, contents: Data?) {
+		guard FileManager.default.fileExists(atPath: url.path) else { return (.absent, nil) }
+		let data: Data
 		do {
-			return .present(try DSStore.read(from: url))
+			data = try Data(contentsOf: url)
+		} catch {
+			// The library's own words for a file it cannot read (`DSStore.read(from: URL)`).
+			throw StoreEditorError.unreadable("\(DSStore.Error.readFailed(error.localizedDescription))")
+		}
+		do {
+			return (.present(try DSStore.read(from: data)), data)
 		} catch {
 			throw StoreEditorError.unreadable("\(error)")
 		}
@@ -67,9 +79,13 @@ public enum StoreEditor {
 		return chosen
 	}
 
+	#if DEBUG
+	/// For the tests and the debug harnesses (`SelfTest`): the app and `finder-presets` read a store once and use
+	/// `managedRecords(in:)`.
 	public static func managedRecords(at url: URL, key: String, codes: [String] = ManagedRecordSet.managedCodes) throws -> ManagedRecordSet? {
 		try read(url).store.map { managedRecords(in: $0, key: key, codes: codes) }
 	}
+	#endif
 
 	/// Applies `settings` to child `key`, preserving every other record and every unknown plist key.
 	/// A preset changes only the options it contains: a record group the settings do not mention is kept exactly as
@@ -113,13 +129,16 @@ public enum StoreEditor {
 		if settings.list.isEmpty {
 			for code in ["lsvC", "lsvp", "lsvP"] { keep(code) }
 		} else {
-			// lsvC (array columns) is what Finder 26 reads first; keep lsvp (dict columns) in sync like Finder does.
+			// lsvC (array columns) is what Finder 26 reads first; keep lsvp (dict columns) in sync like Finder does. A missing
+			// record is made from the folder's other one — the order `ViewRecordCodec.decode` reads them in — never from
+			// the base values, so the options the preset leaves alone keep what the folder showed.
+			let existingP = current["lsvp"]?.dataValue.flatMap(ViewRecordCodec.plist(from:))
 			let existingC = current["lsvC"]?.dataValue.flatMap(ViewRecordCodec.plist(from:))
 				?? current["lsvP"]?.dataValue.flatMap(ViewRecordCodec.plist(from:))
+				?? existingP.map(ViewRecordCodec.arrayForm(ofList:))
 			let mergedC = ViewRecordCodec.mergeList(settings.list, into: existingC, base: bases.listArray)
 			set("lsvC", .data(try ViewRecordCodec.data(from: mergedC)))
-			let existingP = current["lsvp"]?.dataValue.flatMap(ViewRecordCodec.plist(from:))
-			var mergedP = ViewRecordCodec.mergeList(settings.list, into: existingP, base: bases.listDict)
+			var mergedP = ViewRecordCodec.mergeList(settings.list, into: existingP, base: ViewRecordCodec.dictForm(ofList: mergedC))
 			if let cols = mergedC["columns"] as? [[String: Any]] { mergedP["columns"] = ViewRecordCodec.dictColumns(fromArray: cols) }
 			set("lsvp", .data(try ViewRecordCodec.data(from: mergedP)))
 			if current["lsvP"] != nil {
@@ -171,16 +190,19 @@ public enum StoreEditor {
 		return s
 	}
 
-	/// Writes atomically: temp file in the same directory → re-parse → rename over the original.
-	public static func write(_ store: DSStore, to url: URL) throws {
+	/// Writes atomically: temp file in the same directory → re-parse → rename over the original. Returns the store as
+	/// parsed back from the written file (what the folder's `.DS_Store` now holds).
+	@discardableResult
+	public static func write(_ store: DSStore, to url: URL) throws -> DSStore {
 		let dir = url.deletingLastPathComponent()
 		let tmp = dir.appendingPathComponent(".DS_Store.finder-presets-\(UUID().uuidString.prefix(8)).tmp")
+		// Before the write: one that fails partway (a full disk) leaves part of the file behind.
+		defer { try? FileManager.default.removeItem(at: tmp) }
 		do {
 			try store.write(to: tmp)
 		} catch {
 			throw StoreEditorError.writeFailed("\(error)")
 		}
-		defer { try? FileManager.default.removeItem(at: tmp) }
 		// verify
 		let back: DSStore
 		do { back = try DSStore.read(from: tmp) } catch { throw StoreEditorError.verificationFailed("\(error)") }
@@ -192,6 +214,7 @@ public enum StoreEditor {
 		if rename(tmp.path, url.path) != 0 {
 			throw StoreEditorError.writeFailed(String(cString: strerror(errno)))
 		}
+		return back
 	}
 }
 
