@@ -42,12 +42,11 @@ struct FinderPresetsApp: App {
 				.background { FixedWindow().frame(width: 0, height: 0).accessibilityHidden(true) }
 		}
 		.windowResizability(.contentSize)
-		.windowToolbarStyle(.unifiedCompact(showsTitle: true))
 		.commands {
 			CommandGroup(replacing: .newItem) {}
 			// 도움말 > "Finder Presets 사용법" (⌘?) opens the guide sheet. The app has no Help Book, so the standard
 			// "… 도움말" item would only say that no help is available. "최신 버전 열기…" opens GitHub's latest release
-			// page in the browser, like the toolbar's "최신 버전" (ReleaseLink); it opens nothing in the app, so a dialog
+			// page in the browser, like the status bar's version link (ReleaseLink); it opens nothing in the app, so a dialog
 			// does not stop it.
 			CommandGroup(replacing: .help) {
 				Button(String(localized: "Finder Presets 사용법")) { openFromMenu { model.showHelp = true } }
@@ -56,7 +55,7 @@ struct FinderPresetsApp: App {
 				Divider()
 				Button(ReleaseLink.menuTitle) { model.openLatestRelease() }
 			}
-			// 보기 > "작업 기록" (⌘Y): the history sheet, like the toolbar's "기록".
+			// 보기 > "작업 기록" (⌘Y): the history sheet, like the status bar's "기록".
 			CommandGroup(after: .toolbar) {
 				Button(String(localized: "작업 기록")) { openFromMenu { model.openHistory() } }
 					.keyboardShortcut("y", modifiers: .command)

@@ -384,10 +384,10 @@ struct QuickApplyWrite: Sendable {
 		}
 		let finderNote = note.map { " " + $0 } ?? ""
 		guard changed else {
-			return String(localized: "빠른 적용: \(name)에 쓰지 못했습니다(실패). 툴바의 \"기록\"에서 이 작업을 확인하세요.") + finderNote
+			return String(localized: "빠른 적용: \(name)에 쓰지 못했습니다(실패). \"기록\"(⌘Y)에서 이 작업을 확인하세요.") + finderNote
 		}
 		guard overwritten.isEmpty else {
-			return String(localized: "빠른 적용: Finder가 다시 시작한 뒤 \(name)의 보기 설정을 덮어썼습니다. 단축키를 한 번 더 누르세요(이 작업은 툴바의 \"기록\"에 있습니다).") + finderNote
+			return String(localized: "빠른 적용: Finder가 다시 시작한 뒤 \(name)의 보기 설정을 덮어썼습니다. 단축키를 한 번 더 누르세요(이 작업은 \"기록\"(⌘Y)에 있습니다).") + finderNote
 		}
 		return String(localized: "완료: \(name)에 \"\(preset)\"을(를) 적용했습니다.") + finderNote
 	}

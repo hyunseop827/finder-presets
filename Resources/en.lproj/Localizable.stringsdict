@@ -115,10 +115,10 @@
 			<string>%lld folders</string>
 		</dict>
 	</dict>
-	<key>홈 폴더 %lld개는 이미 변경됨 (되돌리기: 툴바의 "기록")</key>
+	<key>홈 폴더 %lld개는 이미 변경됨 (되돌리기: "기록"(⌘Y))</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
-		<string>%#@folders@ already changed (to undo: "History" in the toolbar)</string>
+		<string>%#@folders@ already changed (to undo: History (⌘Y))</string>
 		<key>folders</key>
 		<dict>
 			<key>NSStringFormatSpecTypeKey</key>
@@ -149,12 +149,12 @@
 	</dict>
 	<key>Finder 기본 보기는 바꾸지 못했습니다: %@
 
-홈 폴더 %lld개는 이미 변경됐습니다. 되돌리려면 툴바의 "기록"에서 이 작업을 고르세요.</key>
+홈 폴더 %lld개는 이미 변경됐습니다. 되돌리려면 "기록"(⌘Y)에서 이 작업을 고르세요.</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
 		<string>Finder's default view could not be changed: %@
 
-%#@folders@ already changed. To undo, choose this operation in "History" in the toolbar.</string>
+%#@folders@ already changed. To undo, choose this operation in History (⌘Y).</string>
 		<key>folders</key>
 		<dict>
 			<key>NSStringFormatSpecTypeKey</key>

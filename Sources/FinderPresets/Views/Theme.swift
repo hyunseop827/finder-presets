@@ -27,7 +27,7 @@ extension Color {
 }
 
 enum Theme {
-	/// Window body: both columns and the whole-system bar (the toolbar keeps the system look).
+	/// Window body: both columns and the whole-system bar (the title bar keeps the system look).
 	static let canvas = Color(light: 0xF3F4F8, dark: 0x222329)
 	/// Lists and the preset summary: a step lighter than the canvas in light mode, a step darker in dark mode.
 	static let well = Color(light: 0xFFFFFF, dark: 0x18191E)

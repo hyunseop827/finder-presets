@@ -71,7 +71,7 @@ enum ErrorText {
 			case .notUndoable(let detail): return String(localized: "되돌릴 수 없는 작업입니다: \(detail)")
 			case .notAlreadyRestored: return UndoRefusal.globalChanged.message
 			case .verificationFailed(_, let diffs):
-				return String(localized: "적용한 뒤 다시 읽은 값이 다릅니다: \(differences(diffs)). 툴바의 \"기록\"에서 되돌릴 수 있습니다.")
+				return String(localized: "적용한 뒤 다시 읽은 값이 다릅니다: \(differences(diffs)). \"기록\"(⌘Y)에서 되돌릴 수 있습니다.")
 			}
 		case let e as GlobalDefaultsError:
 			switch e {

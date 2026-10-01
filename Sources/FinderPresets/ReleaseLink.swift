@@ -1,7 +1,7 @@
 import Foundation
 import AppKit
 
-/// "최신 버전" (the main window's toolbar) and 도움말 > "최신 버전 열기…": GitHub's page of this app's latest release, in
+/// The version link in the main window's status bar ("v0.1.0") and 도움말 > "최신 버전 열기…": GitHub's page of this app's latest release, in
 /// the browser. The app itself never goes online — no update check, nothing downloaded: it only asks macOS to open the
 /// page, and the user decides there.
 enum ReleaseLink {
@@ -13,11 +13,13 @@ enum ReleaseLink {
 		Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
 	}
 
-	/// The toolbar button's and the menu item's names (the layout probe measures the button).
-	static var buttonLabel: String { String(localized: "최신 버전") }
+	/// The status bar link's text: this build's version ("v1.2.3"), or `fallbackLabel` outside the app bundle.
+	static func footerLabel(version: String? = appVersion) -> String { version.map { "v\($0)" } ?? fallbackLabel }
+	/// What VoiceOver calls the link (its text, the version, is read as the value).
+	static var fallbackLabel: String { String(localized: "최신 버전") }
 	static var menuTitle: String { String(localized: "최신 버전 열기…") }
 
-	/// The tooltip: which version this is and what the button opens.
+	/// The tooltip: which version this is and what the link opens.
 	static func help(version: String? = appVersion) -> String {
 		let page = String(localized: "GitHub의 최신 릴리스 페이지를 브라우저에서 엽니다. 앱은 업데이트를 직접 확인하지 않습니다.")
 		guard let version else { return page }
@@ -33,7 +35,7 @@ enum ReleaseLink {
 }
 
 extension AppModel {
-	/// "최신 버전" / "최신 버전 열기…": the release page in the browser; the status line says so when macOS could not open it.
+	/// The version link / "최신 버전 열기…": the release page in the browser; the status line says so when macOS could not open it.
 	func openLatestRelease() {
 		if let failure = ReleaseLink.open() { status = failure }
 	}

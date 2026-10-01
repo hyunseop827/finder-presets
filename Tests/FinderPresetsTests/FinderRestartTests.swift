@@ -129,7 +129,7 @@ import DSStore
 		#expect(redo.entries.first?.status == .changed && Self.shows(a) == "icon 72")
 
 		let lost = FinderRestart(quit: true, back: true, undo: true, overwritten: ["/x/A"])
-		#expect(lost.message.hasSuffix(String(localized: "툴바의 \"기록\"에서 확인하세요.")) && Self.tone(lost.message) == .warning)
+		#expect(lost.message.hasSuffix(String(localized: "\"기록\"(⌘Y)에서 확인하세요.")) && Self.tone(lost.message) == .warning)
 	}
 
 	/// Finder does not quit: nothing is written (the store and the record stay byte for byte), Finder is not launched, and

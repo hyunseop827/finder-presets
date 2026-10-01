@@ -145,7 +145,7 @@ import FinderPresetsCore
 			}).summary
 		}
 		let reason = "x", stopped = String(localized: "중단: \(reason)")
-		let undoHint = String(localized: "툴바의 \"기록\"")
+		let undoHint = String(localized: "\"기록\"(⌘Y)")
 
 		let none = AppModel.systemApplyStopNote(reason, home: home([.failed, .failed, .skippedMatching]), homeRequested: true)
 		#expect(none.status == stopped + " · " + String(localized: "홈 폴더는 바꾸지 않음") + " · " + String(localized: "홈 폴더 \(2)개 실패"))
@@ -153,13 +153,13 @@ import FinderPresetsCore
 		#expect(!none.status.contains(undoHint) && !none.alert.contains(undoHint))
 
 		let some = AppModel.systemApplyStopNote(reason, home: home([.changed, .failed, .positionsOnly]), homeRequested: true)
-		#expect(some.status == stopped + " · " + String(localized: "홈 폴더 \(1)개는 이미 변경됨 (되돌리기: 툴바의 \"기록\")") + " · "
+		#expect(some.status == stopped + " · " + String(localized: "홈 폴더 \(1)개는 이미 변경됨 (되돌리기: \"기록\"(⌘Y))") + " · "
 			+ HistoryText.positionsOnlyFolders(1, undo: false) + " · " + String(localized: "홈 폴더 \(1)개 실패"))
 		#expect(some.alert.contains(undoHint))
 
 		let positions = AppModel.systemApplyStopNote(reason, home: home([.positionsOnly]), homeRequested: true)
 		let written = HistoryText.positionsOnlyFolders(1, undo: false)
-		#expect(positions.status == stopped + " · " + String(localized: "이미 씀: \(written) (되돌리기: 툴바의 \"기록\")") && positions.alert.contains(undoHint))
+		#expect(positions.status == stopped + " · " + String(localized: "이미 씀: \(written) (되돌리기: \"기록\"(⌘Y))") && positions.alert.contains(undoHint))
 
 		let notRun = AppModel.systemApplyStopNote(reason, home: nil, homeRequested: true)
 		#expect(notRun.status == stopped + " · " + String(localized: "홈 폴더는 바꾸지 않음") && notRun.alert == reason)

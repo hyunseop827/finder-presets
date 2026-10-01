@@ -575,7 +575,7 @@ private struct MoreMenu: View {
 			.help(String(localized: "목록의 기록과 백업을 모두 지웁니다. 폴더의 보기 설정은 바꾸지 않습니다."))
 			.accessibilityIdentifier("historyDeleteAll")
 		} label: {
-			// Named, not a silent glyph: icon-only buttons were what the user could not find in the toolbar, and this
+			// Named, not a silent glyph: icon-only buttons were easy to miss, and this
 			// menu is the only way to the two actions. There is room for its name beside "닫기" at this width.
 			Label(String(localized: "다른 동작"), systemImage: "ellipsis.circle")
 		}

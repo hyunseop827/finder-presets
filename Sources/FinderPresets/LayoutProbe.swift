@@ -6,15 +6,15 @@ import FinderPresetsCore
 /// Debug builds only (`./scripts/build-app.sh` without `release`); a release build has no `--layout-probe`.
 ///
 /// `FinderPresets --layout-probe` (with `FINDER_PRESETS_DATA_DIR`): checks in the running app that the window has its fixed
-/// size (content 720×440 below the toolbar), that the user cannot resize it (no `.resizable`, zoom button disabled, no
+/// size (content 720×440 below the title bar), that the user cannot resize it (no `.resizable`, zoom button disabled, no
 /// full screen, no window tabs), and that nothing the content does changes that. It records the main window's frame,
 /// then changes what the window shows — selection, the desktop warning, a long status line, many or no folders and
 /// presets, exactly seven folders (with inherited, missing-preset and warning rows) and five presets, a folder added at
 /// the end of a long list, a long preset name, a preset or folder that sorts first added and selected, a new preset in
 /// the middle of a long list and the selected one deleted there, the error alert, the delete confirmation, the help
-/// sheet, the apply confirmation, the whole-system sheet, the toolbar's three labelled buttons ("기록", "사용법", "최신 버전":
-/// their text is not clipped, they lie inside the window, overlap neither each other nor the window title, and fit beside
-/// it in this run's language), the preset editor (an existing preset, every value set with a
+/// sheet, the apply confirmation, the whole-system sheet, the status bar's three links ("기록", "사용법", the version: their
+/// text is not clipped, they lie inside the bar, overlap nothing, leave the status text its room, and the window has no
+/// toolbar), the preset editor (an existing preset, every value set with a
 /// long name and values that cannot be saved, a duplicate name, a new preset, values kept from the preset outside what
 /// the sliders offer, each on "유지" and each of the four views, then each segment of its view control clicked — in light
 /// and dark; one fixed size for all, every option of the view inside it, no scroll area; its preview window beside the
@@ -129,67 +129,40 @@ enum LayoutProbe {
 				return problems
 			}
 
-			/// The toolbar's three buttons ("기록", "사용법", "최신 버전"): each shows its name beside its symbol (its item is
-			/// wide enough for the text in this run's language), each lies inside the window, no two overlap, none overlaps the
-			/// window's title, and the title and the buttons fit the fixed 720pt width. Measured on the toolbar's own item
-			/// views: the SwiftUI label inside a toolbar item is laid out more than once (a narrow copy lives off to the left
-			/// on some Macs), so its own frame is not what the user sees. The title is the text field in the title bar that
-			/// shows the window's title; when it cannot be found, only the width sum below stands for it (and the log says so).
-			@MainActor func toolbarProblems(_ step: String) -> [String] {
-				let labels = MainView.toolbarLabels
-				let views = (window.toolbar?.items ?? []).compactMap(\.view)
-				guard views.count == labels.count else {
-					return ["\(step): 툴바 버튼을 찾지 못했습니다 (\(views.count)개, 기대 \(labels.count)개)"]
-				}
+			/// The status bar's links ("기록", "사용법", the version): each is drawn, lies inside the bar, shows its whole text
+			/// (and the version its arrow), overlaps neither another link nor "되돌리기…", and leaves the status text at least
+			/// 250pt; the window has no toolbar. Measured on the links' own frames (`probeFrame`), in this run's language.
+			@MainActor func statusLinkProblems(_ step: String) -> [String] {
 				var problems: [String] = []
-				let font = NSFont.preferredFont(forTextStyle: .body)
-				var widths: CGFloat = 0
-				// In the window's coordinates (origin at the bottom left, the title bar included).
-				let bounds = CGRect(origin: .zero, size: window.frame.size).insetBy(dx: -0.5, dy: -0.5)
-				var frames: [CGRect] = []
-				for (text, view) in zip(labels, views) {
-					// The text with its symbol (about 16pt) and the 4pt between them; the button's own padding is on top.
-					let needed = (text as NSString).size(withAttributes: [.font: font]).width + 20
-					let width = max(view.frame.width, view.fittingSize.width)
-					if width + 1 < needed {
-						problems.append("툴바 \"\(text)\" 버튼의 글자가 잘립니다: \(Int(width.rounded()))pt < \(Int(needed.rounded(.up)))pt")
-					}
-					if view.frame.height < 10 { problems.append("툴바 \"\(text)\" 버튼이 그려지지 않았습니다: \(rect(view.frame))") }
-					let frame = view.convert(view.bounds, to: nil)
-					if !bounds.contains(frame) { problems.append("툴바 \"\(text)\" 버튼이 창 밖입니다: \(rect(frame))") }
-					frames.append(frame)
-					widths += width
+				if let items = window.toolbar?.items, !items.isEmpty { problems.append("창에 툴바 항목이 있습니다 (\(items.count)개)") }
+				let ids = ["link-history", "link-help", "link-latestRelease"]
+				let labels = StatusBar.linkLabels()
+				guard let bar = frames["statusBar"] else { return ["\(step): 상태 막대의 프레임이 기록되지 않았습니다"] }
+				let links = ids.compactMap { frames[$0] }
+				guard links.count == ids.count else {
+					return ["\(step): 상태 막대 링크를 찾지 못했습니다 (\(links.count)개, 기대 \(ids.count)개)"]
 				}
-				for i in frames.indices {
-					for j in frames.indices where j > i && frames[i].insetBy(dx: 0.5, dy: 0.5).intersects(frames[j].insetBy(dx: 0.5, dy: 0.5)) {
-						problems.append("툴바 \"\(labels[i])\"와 \"\(labels[j])\" 버튼이 겹칩니다: \(rect(frames[i])), \(rect(frames[j]))")
-					}
+				let font = NSFont.preferredFont(forTextStyle: .subheadline)
+				let inside = bar.insetBy(dx: -0.5, dy: -0.5)
+				for (index, (text, frame)) in zip(labels, links).enumerated() {
+					// The text; the version link also has its arrow (about 10pt).
+					let needed = (text as NSString).size(withAttributes: [.font: font]).width + (index == 2 ? 10 : 0)
+					if frame.width + 1 < needed { problems.append("링크 \"\(text)\"의 글자가 잘립니다: \(Int(frame.width.rounded()))pt < \(Int(needed.rounded(.up)))pt") }
+					if frame.height < 10 { problems.append("링크 \"\(text)\"가 그려지지 않았습니다: \(rect(frame))") }
+					if !inside.contains(frame) { problems.append("링크 \"\(text)\"가 상태 막대 밖입니다: \(rect(frame)), 막대 \(rect(bar))") }
 				}
-				// The title's own text field, when the title bar has one that shows it.
-				func titleField(in view: NSView) -> NSTextField? {
-					if let field = view as? NSTextField, field.stringValue == window.title, !field.isHidden, field.frame.width > 0 { return field }
-					for sub in view.subviews { if let found = titleField(in: sub) { return found } }
-					return nil
-				}
-				let titleText = (window.title as NSString).size(withAttributes: [.font: NSFont.titleBarFont(ofSize: 0)]).width
-				var titleNote = "제목 뷰 없음(폭으로만 확인)"
-				if let root = window.contentView?.superview, let field = titleField(in: root) {
-					let title = field.convert(field.bounds, to: nil)
-					// The text itself, not the field's whole width (a title field can be as wide as the space it is given).
-					let text = CGRect(x: field.alignment == .center ? title.midX - titleText / 2 : title.minX, y: title.minY,
-					                  width: min(titleText, title.width), height: title.height)
-					titleNote = "제목 \(rect(text))"
-					for (label, frame) in zip(labels, frames) where frame.insetBy(dx: 0.5, dy: 0.5).intersects(text) {
-						problems.append("툴바 \"\(label)\" 버튼이 창 제목과 겹칩니다: \(rect(frame)), 제목 \(rect(text))")
+				var others = links
+				if let undo = frames["statusUndo"], model.undoShortcutID != nil { others.append(undo) }
+				for i in others.indices {
+					for j in others.indices where j > i && others[i].insetBy(dx: 0.5, dy: 0.5).intersects(others[j].insetBy(dx: 0.5, dy: 0.5)) {
+						problems.append("상태 막대의 링크가 겹칩니다: \(rect(others[i])), \(rect(others[j]))")
 					}
 				}
-				// The title, the buttons, the window buttons (≈78pt) and the space around them.
-				let needed = 78 + titleText + widths + 48
-				if needed > window.frame.width {
-					problems.append("툴바가 좁습니다: 제목 \(Int(titleText.rounded())) + 버튼 \(Int(widths.rounded())) + 여백이 \(Int(window.frame.width))pt를 넘습니다")
-				}
-				let described = zip(labels, frames).map { "\"\($0)\" \(rect($1))" }.joined(separator: ", ")
-				log("  \(step): 툴바 \(described), 제목 \"\(window.title)\" \(Int(titleText.rounded()))pt, \(titleNote)")
+				// The status text's room: from after the icon slot to the first link or "되돌리기…".
+				let room = (others.map(\.minX).min() ?? bar.maxX) - bar.minX - UILayout.edge - 14 - 6 - 8
+				if room < 250 { problems.append("상태 글이 들어갈 자리가 좁습니다: \(Int(room.rounded()))pt") }
+				let described = zip(labels, links).map { "\"\($0)\" \(rect($1))" }.joined(separator: ", ")
+				log("  \(step): 상태 막대 링크 \(described), 상태 글 자리 \(Int(room.rounded()))pt")
 				return problems.map { "\(step): \($0)" }
 			}
 
@@ -712,7 +685,7 @@ enum LayoutProbe {
 			/// Opens the editor in each of its states (an existing preset; every value set with a long name and values
 			/// that cannot be saved; a duplicate name with a refused save's reason; a new preset; values kept from the
 			/// preset outside what the editor offers) on "유지" and on each of the four views, then clicks each segment of
-			/// the view control: the sheet has the same size in all of them, the window stays 720×478, opening changes
+			/// the view control: the sheet has the same size in all of them, the window keeps its size, opening changes
 			/// nothing in the sheet's copy of the draft, a click changes exactly what `PresetDraft.selectView` changes (the
 			/// view style, and a typed text that is not a number the new view does not show) and never the model's draft. Closes it with
 			/// "취소".
@@ -724,7 +697,7 @@ enum LayoutProbe {
 					failures += editorProblems(name, view: view)
 					failures += previewProblems(name, view: view)
 					if let sheet = window.attachedSheet { sheetSizes.insert(size(sheet.frame.size)) }
-					if size(window.frame.size) != "720x478" { failures.append("\(name): 창이 720x478이 아닙니다: \(size(window.frame.size))") }
+					if window.frame.size != base { failures.append("\(name): 창 크기가 시작과 다릅니다: \(size(window.frame.size)), 시작 \(size(base))") }
 				}
 				@MainActor func show(_ step: String, _ make: () -> PresetDraft, problem: String? = nil) async {
 					var last: PresetDraft?
@@ -815,8 +788,8 @@ enum LayoutProbe {
 
 			// Started with the frame an older version remembered (e.g. 1080×700 in the defaults), the window must still
 			// open at its fixed size (FixedWindow corrects it once) and must not be resizable.
-			let toolbar = window.frame.height - window.contentLayoutRect.height
-			log("시작 창: \(size(base)), 콘텐츠 \(size(window.contentLayoutRect.size)), 툴바 \(Int(toolbar.rounded()))")
+			let titleBar = window.frame.height - window.contentLayoutRect.height
+			log("시작 창: \(size(base)), 콘텐츠 \(size(window.contentLayoutRect.size)), 제목 막대 \(Int(titleBar.rounded()))")
 			log("minSize \(size(window.minSize)), maxSize \(size(window.maxSize)), contentMinSize \(size(window.contentMinSize)), contentMaxSize \(size(window.contentMaxSize)), frameAutosaveName \"\(window.frameAutosaveName)\"")
 			failures += fixedProblems().map { "시작: \($0)" }
 
@@ -824,7 +797,7 @@ enum LayoutProbe {
 			             presets: model.presets, selection: model.selectedTargets,
 			             home: model.applyToHomeFolders, desktop: model.includeDesktop)
 			await check("시작")
-			failures += toolbarProblems("시작")
+			failures += statusLinkProblems("시작")
 			if let scroll = window.contentView.map(scrollViews)?.first {
 				log("목록 스크롤 영역: 콘텐츠 여백 \(Int(scroll.contentInsets.top))/\(Int(scroll.contentInsets.bottom)), 문서 \(Int(scroll.documentView?.frame.height ?? 0)), 보이는 높이 \(Int(scroll.contentView.bounds.height)), 위치 \(Int(scroll.contentView.bounds.minY))")
 			}
@@ -1484,7 +1457,7 @@ enum LayoutProbe {
 			let appearance = NSApp.appearance
 			NSApp.appearance = NSAppearance(named: .aqua)
 			await check("라이트 모드")
-			failures += toolbarProblems("라이트 모드")
+			failures += statusLinkProblems("라이트 모드")
 			// Light: no star and no shortcut, with every step of the walkthrough. Dark: a starred preset and the shortcut of
 			// the machine this was written for ("@~^p" → ⌃⌥⌘P), then the same shortcut with the service switched off (the
 			// longest line, and a warning) — there the walkthrough is opened on its last step, the one that shows the state.
@@ -1493,7 +1466,7 @@ enum LayoutProbe {
 			await previewSteps("라이트 모드: ")
 			NSApp.appearance = NSAppearance(named: .darkAqua)
 			await check("다크 모드")
-			failures += toolbarProblems("다크 모드")
+			failures += statusLinkProblems("다크 모드")
 			let bundleID = Bundle.main.bundleIdentifier ?? ""
 			await settingsSteps("다크 모드", quick: model.presets.first,
 			                    shortcut: ServiceShortcut.status(keyEquivalent: "@~^p", bundleID: bundleID),

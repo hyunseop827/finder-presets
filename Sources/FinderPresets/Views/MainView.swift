@@ -32,35 +32,6 @@ struct MainView: View {
 		.frame(width: UILayout.content.width, height: UILayout.content.height, alignment: .topLeading)
 		.background(Theme.canvas)
 		.probeFrame("root")
-		// The buttons say what they are: a symbol with its name beside it, in the primary text color (icon-only toolbar
-		// buttons were easy to miss). The three labels and the window title fit the fixed 720pt width in both languages
-		// (checked by the layout probe, and estimated by AppHelpersTests.fixedLayoutBudget).
-		.toolbar {
-			ToolbarItemGroup(placement: .primaryAction) {
-				Button { model.openHistory() } label: {
-					Label(Self.historyLabel, systemImage: "clock.arrow.circlepath")
-						.foregroundStyle(.primary)
-				}
-				.labelStyle(.titleAndIcon)
-				.help(String(localized: "작업 기록 보기 · 되돌리기"))
-				.accessibilityIdentifier("history")
-				Button { model.showHelp = true } label: {
-					Label(Self.helpLabel, systemImage: "questionmark.circle")
-						.foregroundStyle(.primary)
-				}
-				.labelStyle(.titleAndIcon)
-				.help(String(localized: "사용법 보기"))
-				.accessibilityIdentifier("help")
-				// GitHub's latest release page in the browser (ReleaseLink): the app never checks for updates itself.
-				Button { model.openLatestRelease() } label: {
-					Label(ReleaseLink.buttonLabel, systemImage: "arrow.down.circle")
-						.foregroundStyle(.primary)
-				}
-				.labelStyle(.titleAndIcon)
-				.help(ReleaseLink.help())
-				.accessibilityIdentifier("latestRelease")
-			}
-		}
 		.sheet(isPresented: presented({ model.showHelp }, dismiss: { model.showHelp = false })) { HelpSheet() }
 		.sheet(isPresented: presented({ model.showHistory }, dismiss: { model.closeHistory() })) { HistorySheet() }
 		.sheet(isPresented: presented({ model.pendingGlobalApply != nil }, dismiss: { model.cancelPendingGlobalApply() })) {
@@ -104,11 +75,6 @@ struct MainView: View {
 		// A Finder service that arrives after the window was closed opens it again (FinderServices.swift).
 		.onAppear { FinderServiceProvider.shared.openMainWindow = { [openWindow] in openWindow(id: "main") } }
 	}
-
-	/// The toolbar buttons' names, in the toolbar's order (the layout probe measures them).
-	static var historyLabel: String { String(localized: "기록") }
-	static var helpLabel: String { String(localized: "사용법") }
-	static var toolbarLabels: [String] { [historyLabel, helpLabel, ReleaseLink.buttonLabel] }
 
 	/// "총 15개 폴더를 바꿉니다: Pictures 3개 폴더, 목록 보기 12개 폴더. …"
 	static func confirmMessage(_ p: PendingApply) -> String {

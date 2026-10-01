@@ -1,13 +1,13 @@
 import SwiftUI
 import AppKit
 
-// A fixed-size window: the content below the toolbar is always `UILayout.content`, and the user cannot resize it
+// A fixed-size window: the content below the title bar is always `UILayout.content`, and the user cannot resize it
 // (no edge or corner drag, no zoom button, no full screen, no title-bar double-click zoom). Every area takes exactly
 // the space given to it here (`section`), so nothing the content shows (summaries, warnings, long status text, folder
 // counts, sheets) can push the window or another area. Only the two lists scroll, and only when their rows do not fit.
 
 enum UILayout {
-	/// Content below the toolbar (`.unifiedCompact`), fixed.
+	/// Content below the title bar (the window has no toolbar), fixed.
 	static let content = CGSize(width: 720, height: 440)
 	/// Window edge ↔ content, left and right.
 	static let edge: CGFloat = 12
@@ -145,8 +145,8 @@ struct FixedWindow: NSViewRepresentable {
 			let content = window.contentLayoutRect.size
 			guard abs(content.width - UILayout.content.width) > 1 || abs(content.height - UILayout.content.height) > 1 else { return }
 			var frame = window.frame
-			let toolbar = frame.height - content.height
-			frame.size = NSSize(width: UILayout.content.width, height: UILayout.content.height + toolbar)
+			let titleBar = frame.height - content.height
+			frame.size = NSSize(width: UILayout.content.width, height: UILayout.content.height + titleBar)
 			frame.origin.y = window.frame.maxY - frame.height
 			window.setFrame(frame, display: true)
 		}

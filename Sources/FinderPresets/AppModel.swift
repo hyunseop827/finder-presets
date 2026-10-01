@@ -224,7 +224,7 @@ struct FinderRestart: Equatable, Sendable {
 			parts.append(String(localized: "폴더 \(leftAlone.count)개는 다시 시작하기 전에 이미 쓴 값이 아니어서 다시 쓰지 않았습니다(창을 닫을 때 Finder가 덮어썼거나 다른 곳에서 바뀜)."))
 		}
 		if !notRewritten.isEmpty || !still.isEmpty || !leftAlone.isEmpty {
-			parts.append(undo ? String(localized: "툴바의 \"기록\"에서 확인하세요.") : String(localized: "폴더가 바뀌지 않았으면 다시 적용하세요."))
+			parts.append(undo ? String(localized: "\"기록\"(⌘Y)에서 확인하세요.") : String(localized: "폴더가 바뀌지 않았으면 다시 적용하세요."))
 		}
 		return parts.joined(separator: " ")
 	}
@@ -968,7 +968,7 @@ final class AppModel {
 	/// The status line of a write that stopped partway (a record that could not be saved): the reason, and that some
 	/// folders may be written already (an apply, the quick preset).
 	nonisolated static func stoppedWriteNote(_ reason: String) -> String {
-		String(localized: "중단: \(reason)") + " · " + String(localized: "일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: 툴바의 \"기록\")")
+		String(localized: "중단: \(reason)") + " · " + String(localized: "일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: \"기록\"(⌘Y))")
 	}
 
 	static var cancelNote: String { String(localized: "취소했습니다. 파일과 Finder 설정은 그대로입니다.") }
@@ -1313,7 +1313,7 @@ final class AppModel {
 					}
 					self.status = String(localized: "완료: \(parts.joined(separator: " · "))") + relaunchNote
 					if let folderError {
-						self.errorMessage = String(localized: "홈 폴더에 적용하지 못했습니다: \(ErrorText.describe(folderError))\n일부 폴더는 이미 변경됐을 수 있습니다. 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
+						self.errorMessage = String(localized: "홈 폴더에 적용하지 못했습니다: \(ErrorText.describe(folderError))\n일부 폴더는 이미 변경됐을 수 있습니다. 되돌리려면 \"기록\"(⌘Y)에서 이 작업을 고르세요.")
 					}
 				}
 				// "되돌리기…" in the status line: Finder's defaults when they were written, else the home folders.
@@ -1397,14 +1397,14 @@ final class AppModel {
 		}
 		let alert: String
 		if home.changed > 0 {
-			parts.append(String(localized: "홈 폴더 \(home.changed)개는 이미 변경됨 (되돌리기: 툴바의 \"기록\")"))
+			parts.append(String(localized: "홈 폴더 \(home.changed)개는 이미 변경됨 (되돌리기: \"기록\"(⌘Y))"))
 			if home.positionsOnly > 0 { parts.append(HistoryText.positionsOnlyFolders(home.positionsOnly, undo: false)) }
-			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더 \(home.changed)개는 이미 변경됐습니다. 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
+			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더 \(home.changed)개는 이미 변경됐습니다. 되돌리려면 \"기록\"(⌘Y)에서 이 작업을 고르세요.")
 		} else if home.positionsOnly > 0 {
 			// Only icon positions were written: "홈 폴더 0개는 이미 변경됨" would hide them, and they can be undone too.
 			let positions = HistoryText.positionsOnlyFolders(home.positionsOnly, undo: false)
-			parts.append(String(localized: "이미 씀: \(positions) (되돌리기: 툴바의 \"기록\")"))
-			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더에는 이미 썼습니다(\(positions)). 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요.")
+			parts.append(String(localized: "이미 씀: \(positions) (되돌리기: \"기록\"(⌘Y))"))
+			alert = String(localized: "Finder 기본 보기는 바꾸지 못했습니다: \(reason)\n\n홈 폴더에는 이미 썼습니다(\(positions)). 되돌리려면 \"기록\"(⌘Y)에서 이 작업을 고르세요.")
 		} else {
 			// Nothing written in the home folders: not "홈 폴더 0개는 이미 변경됨", and nothing to undo there.
 			parts.append(String(localized: "홈 폴더는 바꾸지 않음"))

@@ -356,12 +356,12 @@ import DSStore
 		#expect(write.finder == .restarted(back: true) && !write.changed && write.error == nil && write.operation?.summary.failed == 1)
 		let name = "Folder", restarted = " " + String(localized: "Finder를 다시 시작하고 이 폴더를 다시 열었습니다.")
 		let message = write.message(folder: name, preset: "Icon88")
-		#expect(message == String(localized: "빠른 적용: \(name)에 쓰지 못했습니다(실패). 툴바의 \"기록\"에서 이 작업을 확인하세요.") + restarted)
+		#expect(message == String(localized: "빠른 적용: \(name)에 쓰지 못했습니다(실패). \"기록\"(⌘Y)에서 이 작업을 확인하세요.") + restarted)
 		#expect(StatusBar.tone(status: message, working: false) == .warning && write.needsAttention)
 
 		// The stopped line ends in a parenthesis: the note is its own " · " segment, not glued to it.
 		let stopped = QuickApplyWrite(finder: .restarted(back: true), operation: nil, error: "manifest")
-		let changedNote = String(localized: "일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: 툴바의 \"기록\")")
+		let changedNote = String(localized: "일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: \"기록\"(⌘Y))")
 		#expect(stopped.message(folder: name, preset: "Icon88") == String(localized: "중단: manifest") + " · " + changedNote
 			+ " · " + String(localized: "Finder를 다시 시작하고 이 폴더를 다시 열었습니다."))
 		// A record that stopped partway may exist: the cleanup and the history follow it like a recorded one.

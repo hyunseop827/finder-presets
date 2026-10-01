@@ -315,19 +315,25 @@ import FinderPresetsCore
 		#expect(spelling.map(\.lastPathComponent) == ["ReleaseLink.swift"])
 	}
 
-	/// The toolbar's third button and 도움말 > "최신 버전 열기…" both go through `AppModel.openLatestRelease` (read from the
-	/// sources: SwiftUI's toolbar and menu cannot be built without a window), the button with its identifier and symbol;
-	/// both names have English texts.
-	@Test func toolbarButtonAndHelpMenuOpenTheLatestRelease() throws {
+	/// The status bar's version link and 도움말 > "최신 버전 열기…" both go through `AppModel.openLatestRelease` (read from
+	/// the sources: SwiftUI's views and menus cannot be built without a window). The link shows this build's version, VoiceOver
+	/// calls it "최신 버전", and the window has no toolbar any more: the history and the guide are links beside it.
+	@Test func statusBarLinkAndHelpMenuOpenTheLatestRelease() throws {
 		let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-		let main = try String(contentsOf: root.appendingPathComponent("Sources/FinderPresets/Views/MainView.swift"), encoding: .utf8)
+		let views = root.appendingPathComponent("Sources/FinderPresets/Views")
+		let bar = try String(contentsOf: views.appendingPathComponent("StatusBar.swift"), encoding: .utf8)
+		let main = try String(contentsOf: views.appendingPathComponent("MainView.swift"), encoding: .utf8)
 		let app = try String(contentsOf: root.appendingPathComponent("Sources/FinderPresets/FinderPresetsApp.swift"), encoding: .utf8)
-		#expect(main.contains("Button { model.openLatestRelease() } label: {") && main.contains(".accessibilityIdentifier(\"latestRelease\")"))
-		#expect(main.contains("Label(ReleaseLink.buttonLabel, systemImage: \"arrow.down.circle\")") && main.contains(".help(ReleaseLink.help())"))
+		#expect(bar.contains("model.openLatestRelease()") && bar.contains("id: \"latestRelease\"") && bar.contains("help: ReleaseLink.help()"))
+		#expect(bar.contains("id: \"history\") { model.openHistory() }") && bar.contains("id: \"help\") { model.showHelp = true }"))
+		#expect(!main.contains(".toolbar"))
 		let help = try #require(app.range(of: "CommandGroup(replacing: .help)"))
 		#expect(app[help.upperBound...].prefix(600).contains("Button(ReleaseLink.menuTitle) { model.openLatestRelease() }"))
+
+		#expect(ReleaseLink.footerLabel(version: "1.2.3") == "v1.2.3" && ReleaseLink.footerLabel(version: nil) == ReleaseLink.fallbackLabel)
+		#expect(StatusBar.linkLabels(version: "1.2.3").last == "v1.2.3")
 		let english = try LocalizationTests.strings("en", "Localizable")
-		#expect(english[ReleaseLink.buttonLabel] == "Latest Release" && english[ReleaseLink.menuTitle] == "Open Latest Release…")
-		#expect(MainView.toolbarLabels.last == ReleaseLink.buttonLabel)
+		#expect(english[ReleaseLink.fallbackLabel] == "Latest Release" && english[ReleaseLink.menuTitle] == "Open Latest Release…")
+		#expect(english[StatusBar.historyLabel] == "History" && english[StatusBar.helpLabel] != nil)
 	}
 }

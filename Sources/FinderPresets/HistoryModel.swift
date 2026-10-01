@@ -179,7 +179,7 @@ enum UndoRefusal: Error, Equatable {
 extension AppModel {
 	// MARK: History sheet ("기록")
 
-	/// "기록" in the toolbar, and the status line's "되돌리기…": opens the sheet, reads the records in the background,
+	/// "기록" in the status bar (and ⌘Y), and the status line's "되돌리기…": opens the sheet, reads the records in the background,
 	/// selects `id` (else the newest when records were added since the sheet last listed them, else keeps the selection,
 	/// else the newest: `chosenHistoryRecords`) and, with `startUndo`, prepares its undo — the confirmation only, nothing is
 	/// written before "되돌리기".

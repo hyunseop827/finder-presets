@@ -17,7 +17,7 @@ struct HelpSheet: View {
 		(String(localized: "아래쪽 \"시스템 전체에 적용…\"은 Finder 기본 보기와 홈 폴더(창 자체와 그 안의 폴더)를 한 번에 바꿉니다. Finder가 자동으로 다시 시작됩니다."),
 		 String(localized: "Finder가 다시 시작되면 열려 있던 Finder 창이 다시 열립니다(검색·최근 항목 창 제외).")),
 		(String(localized: "이미 열어본 폴더는 Finder를 다시 시작해야 새 모양이 보입니다."), nil),
-		(String(localized: "바뀌기 전 상태는 자동으로 백업되고, 툴바의 \"기록\"에서 되돌릴 수 있습니다."), nil),
+		(String(localized: "바뀌기 전 상태는 자동으로 백업되고, \"기록\"(⌘Y)에서 되돌릴 수 있습니다."), nil),
 		// The Finder services (FinderServices.swift): the titles Finder shows are the tooltip.
 		(String(localized: "Finder에서 폴더를 오른쪽 클릭한 뒤 \"서비스\"에서도 폴더 추가, 프리셋 만들기, 적용을 할 수 있습니다."),
 		 String(localized: "서비스 메뉴의 이름: \"\(FinderService.addFolders.localizedTitle)\", \"\(FinderService.makePresets.localizedTitle)\", \"\(FinderService.apply.localizedTitle)\"(적용 전에 확인 창을 엽니다).")),
@@ -185,7 +185,7 @@ struct HelpSheet: View {
 					.foregroundStyle(Theme.warning)
 					.fixedSize(horizontal: false, vertical: true)
 			}
-			Text(String(localized: "되돌리기와 고정은 툴바의 \"기록\"에서 합니다. 아래는 소스에서 빌드한 명령줄 도구 finder-presets용입니다(디스크 이미지에는 없습니다)."))
+			Text(String(localized: "되돌리기와 고정은 \"기록\"(⌘Y)에서 합니다. 아래는 소스에서 빌드한 명령줄 도구 finder-presets용입니다(디스크 이미지에는 없습니다)."))
 				.font(.callout)
 				.foregroundStyle(.secondary)
 				.fixedSize(horizontal: false, vertical: true)

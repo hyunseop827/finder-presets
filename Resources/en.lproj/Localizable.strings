@@ -62,11 +62,11 @@
 "적용하는 중…" = "Applying…";
 ", %lld개 실패" = ", %lld failed";
 "중단: %@" = "Stopped: %@";
-"일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: 툴바의 \"기록\")" = "some folders may already have changed (to undo: \"History\" in the toolbar)";
+"일부 폴더는 이미 변경됐을 수 있습니다 (되돌리기: \"기록\"(⌘Y))" = "some folders may already have changed (to undo: History (⌘Y))";
 "Finder를 다시 시작하는 중…" = "Restarting Finder…";
 "Finder를 다시 시작했습니다. 폴더를 열어 확인하세요." = "Finder was restarted. Open the folders to check them.";
 "Finder 재실행 실패: Finder가 종료되지 않았습니다(아무것도 다시 쓰지 않음). Finder의 복사나 대화상자가 끝난 뒤, 다시 묻는 창에서 \"지금 다시 시작\"을 고르세요." = "Finder restart failed: Finder did not quit (nothing was written again). Once Finder's copy or dialog is done, choose \"Restart Now\" in the question asked again.";
-"툴바의 \"기록\"에서 확인하세요." = "See \"History\" in the toolbar.";
+"\"기록\"(⌘Y)에서 확인하세요." = "See History (⌘Y).";
 "폴더가 바뀌지 않았으면 다시 적용하세요." = "If a folder did not change, apply again.";
 "프리셋에 적용할 값이 없습니다." = "The preset has no values to apply.";
 "Finder 기본 보기와 홈 폴더를 확인하는 중…" = "Checking Finder's default view and the home folders…";
@@ -89,7 +89,7 @@
 "홈 폴더는 이미 동일" = "home folders already the same";
 "홈 폴더 변경 안 됨" = "home folders not changed";
 "완료: %@" = "Done: %@";
-"홈 폴더에 적용하지 못했습니다: %@\n일부 폴더는 이미 변경됐을 수 있습니다. 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요." = "Could not apply to the home folders: %@\nSome folders may already have changed. To undo, choose this operation in \"History\" in the toolbar.";
+"홈 폴더에 적용하지 못했습니다: %@\n일부 폴더는 이미 변경됐을 수 있습니다. 되돌리려면 \"기록\"(⌘Y)에서 이 작업을 고르세요." = "Could not apply to the home folders: %@\nSome folders may already have changed. To undo, choose this operation in History (⌘Y).";
 
 /* DragTypes */
 "폴더나 프리셋 JSON 파일만 놓을 수 있습니다: %@" = "Only folders and preset JSON files can be dropped here: %@";
@@ -161,7 +161,7 @@
 "다시 보지 않기" = "Don't show again";
 "닫기" = "Close";
 "이 실행은 FINDER_PRESETS_DATA_DIR의 데이터 폴더를 씁니다. Finder 서비스도 떠 있는 이 앱이 받아 이 폴더에 씁니다. 앱이 꺼져 있을 때 서비스를 고르면 macOS가 앱을 기본 데이터 폴더로 실행합니다." = "This run uses the data folder in FINDER_PRESETS_DATA_DIR. The Finder services go to this running app and use this folder too. A service chosen while the app is not running makes macOS start the app with the default data folder.";
-"되돌리기와 고정은 툴바의 \"기록\"에서 합니다. 아래는 소스에서 빌드한 명령줄 도구 finder-presets용입니다(디스크 이미지에는 없습니다)." = "Undo and pinning are in \"History\" in the toolbar. The commands below are for the command-line tool finder-presets built from source (it is not in the disk image).";
+"되돌리기와 고정은 \"기록\"(⌘Y)에서 합니다. 아래는 소스에서 빌드한 명령줄 도구 finder-presets용입니다(디스크 이미지에는 없습니다)." = "Undo and pinning are in History (⌘Y). The commands below are for the command-line tool finder-presets built from source (it is not in the disk image).";
 "백업 위치: %@" = "Backups: %@";
 "시스템 전체 적용은 바뀐 쪽의 작업만 남깁니다(홈 폴더는 apply, Finder 기본 보기는 applyGlobal). 기록이나 finder-presets ops에서 같은 시각의 작업을 찾으세요." = "A system-wide apply records only what changed (home folders: apply, Finder's default view: applyGlobal). Look for the operations of the same time in History or finder-presets ops.";
 
@@ -278,7 +278,7 @@
 "현재 전역 설정을 기록하지 못해 중단했습니다 (아무것도 바꾸지 않음)" = "The current global settings could not be recorded, so nothing was done (nothing changed)";
 "Finder를 종료하지 못해 중단했습니다 (아무것도 바꾸지 않음). 시스템 설정 > 개인정보 보호 및 보안 > 자동화에서 Finder 제어를 허용했는지 확인하세요" = "Finder did not quit, so nothing was done (nothing changed). Check that controlling Finder is allowed in System Settings > Privacy & Security > Automation";
 "되돌릴 수 없는 작업입니다: %@" = "This operation cannot be undone: %@";
-"적용한 뒤 다시 읽은 값이 다릅니다: %@. 툴바의 \"기록\"에서 되돌릴 수 있습니다." = "The values read back after the apply differ: %@. You can undo it in \"History\" in the toolbar.";
+"적용한 뒤 다시 읽은 값이 다릅니다: %@. \"기록\"(⌘Y)에서 되돌릴 수 있습니다." = "The values read back after the apply differ: %@. You can undo it in History (⌘Y).";
 "기본값을 디스크에 기록하지 못했습니다 (%@)" = "Could not write the defaults to disk (%@)";
 "저장된 전역 설정 스냅샷을 읽을 수 없어 복원을 중단했습니다" = "The saved snapshot of the global settings cannot be read, so nothing was restored";
 
@@ -614,8 +614,8 @@
 /* The system-wide confirmation: what each folder of the list covers (Views/SystemBar.swift). */
 "자체와 고유 설정이 있는 폴더" = "itself and folders with their own settings";
 "하위 폴더 모두" = "with all subfolders";
-"이미 씀: %@ (되돌리기: 툴바의 \"기록\")" = "Already written: %@ (to undo: \"History\" in the toolbar)";
-"Finder 기본 보기는 바꾸지 못했습니다: %@\n\n홈 폴더에는 이미 썼습니다(%@). 되돌리려면 툴바의 \"기록\"에서 이 작업을 고르세요." = "Finder's default view could not be changed: %@\n\nThe home folder was already written (%@). To undo, choose this operation in \"History\" in the toolbar.";
+"이미 씀: %@ (되돌리기: \"기록\"(⌘Y))" = "Already written: %@ (to undo: History (⌘Y))";
+"Finder 기본 보기는 바꾸지 못했습니다: %@\n\n홈 폴더에는 이미 썼습니다(%@). 되돌리려면 \"기록\"(⌘Y)에서 이 작업을 고르세요." = "Finder's default view could not be changed: %@\n\nThe home folder was already written (%@). To undo, choose this operation in History (⌘Y).";
 
 /* The quick preset ("빠른 적용": QuickPreset.swift, the star in Views/PresetPane.swift, the Settings window, the guide). */
 "다른 작업이 진행 중이라 빠른 적용을 하지 않았습니다." = "Another task is running, so the quick preset was not applied.";
@@ -640,9 +640,9 @@
 "빠른 적용: %@에 \"%@\"을(를) 쓰는 중…" = "Quick preset: writing to %@ (\"%@\")…";
 "Finder를 다시 시작하고 이 폴더를 다시 열었습니다." = "Restarted Finder and opened this folder again.";
 "완료: %@에 \"%@\"을(를) 적용했습니다." = "Done: %@ now uses \"%@\".";
-"빠른 적용: %@에 쓰지 못했습니다(실패). 툴바의 \"기록\"에서 이 작업을 확인하세요." = "Quick preset: writing to %@ failed. See this operation in \"History\" in the toolbar.";
+"빠른 적용: %@에 쓰지 못했습니다(실패). \"기록\"(⌘Y)에서 이 작업을 확인하세요." = "Quick preset: writing to %@ failed. See this operation in History (⌘Y).";
 "Finder가 종료되지 않아 빠른 적용을 하지 않았습니다(아무것도 바꾸지 않음). Finder의 복사나 대화상자가 끝난 뒤 다시 누르세요." = "Finder did not quit, so the quick preset was not applied (nothing was changed). Press the shortcut again once Finder's copy or dialog is done.";
-"빠른 적용: Finder가 다시 시작한 뒤 %@의 보기 설정을 덮어썼습니다. 단축키를 한 번 더 누르세요(이 작업은 툴바의 \"기록\"에 있습니다)." = "Quick preset: after restarting, Finder overwrote the view settings of %@. Press the shortcut once more (this operation is in \"History\" in the toolbar).";
+"빠른 적용: Finder가 다시 시작한 뒤 %@의 보기 설정을 덮어썼습니다. 단축키를 한 번 더 누르세요(이 작업은 \"기록\"(⌘Y)에 있습니다)." = "Quick preset: after restarting, Finder overwrote the view settings of %@. Press the shortcut once more (this operation is in History (⌘Y)).";
 "빠른 적용: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같아 쓰지 않았습니다." = "Quick preset: the view settings file of %@ already matched \"%@\", so nothing was written.";
 "완료: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같았지만 Finder 창은 다른 보기를 보여 주고 있었습니다. Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\", but the Finder window showed another view. Finder was restarted and the folder opened again; the file was left as it was.";
 "완료: %@의 보기 설정 파일은 이미 \"%@\" 프리셋과 같았습니다. Finder 창의 보기를 확인하지 못해 Finder를 다시 시작하고 이 폴더를 다시 열었습니다. 파일은 그대로 두었습니다." = "Done: the view settings file of %@ already matched \"%@\". The Finder window's view could not be checked, so Finder was restarted and the folder opened again; the file was left as it was.";
@@ -658,7 +658,7 @@
 "단축키는 시스템 설정 > 키보드 > 키보드 단축키 > 서비스의 \"%@\"에 지정합니다(추천 ⌃⌥⌘P). 적용하면 Finder가 다시 시작되고 열려 있던 창이 다시 열립니다." = "Set its shortcut in System Settings > Keyboard > Keyboard Shortcuts > Services: \"%@\" (suggested ⌃⌥⌘P). Applying restarts Finder and reopens its windows.";
 "서비스가 꺼져 있어 단축키가 작동하지 않습니다. \"설정 방법 보기…\"를 누르면 체크상자를 켜는 화면까지 안내합니다." = "The service is switched off, so the shortcut does nothing. \"How to set it up…\" walks you to the check box that turns it back on.";
 "별표한 프리셋이 없어 단축키를 눌러도 아무 일도 일어나지 않습니다. 프리셋 목록에서 쓸 프리셋의 별표를 누르세요." = "While no preset is starred, pressing the shortcut does nothing. Star the preset you want in the preset list.";
-"바뀌기 전 상태는 자동으로 백업되고, 툴바의 \"기록\"에서 되돌릴 수 있습니다." = "Everything is backed up first; undo it in \"History\" in the toolbar.";
+"바뀌기 전 상태는 자동으로 백업되고, \"기록\"(⌘Y)에서 되돌릴 수 있습니다." = "Everything is backed up first; undo it in History (⌘Y).";
 "별표한 프리셋은 단축키로 앞 Finder 창의 폴더에만 바로 적용할 수 있습니다." = "A shortcut applies the starred preset to the front Finder window's folder only.";
 "단축키는 시스템 설정 > 키보드 > 키보드 단축키 > 서비스의 \"%@\"에 지정합니다(추천 ⌃⌥⌘P). 앱의 설정 창에서 \"설정 방법 보기…\"를 누르면 그 화면까지 단계별로 안내합니다. 적용하면 Finder가 다시 시작되고, 열려 있던 Finder 창과 그 폴더가 다시 열립니다. 되돌리기는 \"기록\"에서 합니다." = "Set its shortcut in System Settings > Keyboard > Keyboard Shortcuts > Services: \"%@\" (suggested ⌃⌥⌘P). \"How to set it up…\" in the app's Settings walks you there step by step. Applying restarts Finder: its open windows and that folder open again. Undo it in \"History\".";
 
