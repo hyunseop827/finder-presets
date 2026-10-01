@@ -426,6 +426,12 @@ enum LayoutProbe {
 						if switcher.segmentCount != 5 || switcher.selectedSegment != index {
 							problems.append("보기 버튼: 칸 \(switcher.segmentCount)개, 선택 \(switcher.selectedSegment) (기대 \(index))")
 						}
+						// Every segment has a set width, and the control has at least its own width (else AppKit squeezes one).
+						let automatic = (0..<switcher.segmentCount).filter { switcher.width(forSegment: $0) <= 0 }
+						if !automatic.isEmpty { problems.append("보기 버튼의 칸 \(automatic)의 폭이 정해지지 않았습니다") }
+						if switcher.frame.width + 0.5 < switcher.intrinsicContentSize.width {
+							problems.append("보기 버튼이 제 폭보다 좁습니다: \(Int(switcher.frame.width)) < \(Int(switcher.intrinsicContentSize.width.rounded(.up)))pt")
+						}
 						// The drawn control (its alignment rect): the view's frame reaches past it by the bezel's outset (2pt
 						// on each side), which SwiftUI lays out beyond the row on purpose.
 						let r = switcher.convert(switcher.alignmentRect(forFrame: switcher.bounds), to: nil)

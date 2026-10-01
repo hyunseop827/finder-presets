@@ -277,6 +277,18 @@ import FinderPresetsCore
 		#expect(ViewStyle.allCases.map(ViewSwitcher.symbol) == ["square.grid.2x2", "list.bullet", "rectangle.split.3x1", "squares.below.rectangle"])
 	}
 
+	/// No segment of the view control is sized by what is left over: every one has a set width ("유지" its text and
+	/// padding), and the editor gives the control exactly the width a control made the same way asks for.
+	@Test func viewControlSegmentsHaveSetWidths() {
+		let control = ViewSwitcher.makeControl()
+		#expect((0..<control.segmentCount).map { control.width(forSegment: $0) }
+		        == [ViewSwitcher.keepWidth] + Array(repeating: ViewSwitcher.segmentWidth, count: 4))
+		let text = (Fmt.keep as NSString).size(withAttributes: [.font: ViewSwitcher.font]).width
+		#expect(ViewSwitcher.keepWidth >= text + 16 && ViewSwitcher.keepWidth < text + 18)
+		#expect(abs(ViewSwitcher.width - control.intrinsicContentSize.width) < 0.5)
+		#expect(ViewSwitcher.width >= ViewSwitcher.keepWidth + 4 * ViewSwitcher.segmentWidth)
+	}
+
 	/// A typed text that cannot be saved (not a number) and that the chosen view does not show goes back to the preset's
 	/// value (empty for a new preset), so it never blocks "저장" out of sight; the numbers of the chosen view, valid (or
 	/// clamped) values and values kept from the preset are never touched.

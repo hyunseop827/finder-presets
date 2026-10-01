@@ -228,16 +228,18 @@ struct PresetEditorSheet: View {
 				.accessibilityIdentifier("editorName")
 				.probeFrame("editorNameField")
 			Spacer(minLength: 8)
+			// Cut at the end rather than drawn under the control if a language ever needs more room (the tooltip has it all).
 			Text(result)
 				.font(.subheadline)
 				.foregroundStyle(.secondary)
 				.lineLimit(1)
-				.fixedSize()
+				.truncationMode(.tail)
 				.help(result)
 				.accessibilityIdentifier("editorViewResult")
 				.probeFrame("editorViewResult")
 			ViewSwitcher(selection: Binding(get: { draft.viewStyle }, set: { select($0) }))
-				.fixedSize()
+				.frame(width: ViewSwitcher.width)
+				.fixedSize(horizontal: false, vertical: true)
 				.accessibilityIdentifier("editorViewPicker")
 		}
 		.frame(height: Self.topRowHeight)
@@ -678,33 +680,49 @@ struct ViewSwitcher: NSViewRepresentable {
 		}
 	}
 	static let segmentWidth: CGFloat = 32
+	/// "유지" in the size of the texts around it (the caption, the options), not the control's larger default; the symbols
+	/// keep their size.
+	static var font: NSFont { .systemFont(ofSize: NSFont.smallSystemFontSize) }
+	/// "유지"'s segment: its text in `font` and the padding AppKit gives a segment of its own width. Every segment has a set
+	/// width, so none is sized by what is left: an automatic "유지" beside the four fixed segments shrank to nothing when the
+	/// control got less than its intrinsic width (seen on macOS 27 with the sheet active), and its text was drawn over the
+	/// caption beside it.
+	static var keepWidth: CGFloat { ((Fmt.keep as NSString).size(withAttributes: [.font: font]).width + 16).rounded(.up) }
+	/// The control's width, from a control made the same way; the editor gives it exactly this.
+	static let width: CGFloat = makeControl().intrinsicContentSize.width
 
 	static func index(_ view: ViewStyle?) -> Int { choices.firstIndex(of: view) ?? 0 }
 
 	func makeCoordinator() -> Coordinator { Coordinator(selection: $selection) }
 
 	func makeNSView(context: Context) -> NSSegmentedControl {
-		let control = NSSegmentedControl(labels: Self.choices.map { _ in "" }, trackingMode: .selectOne, target: context.coordinator,
-		                                  action: #selector(Coordinator.changed(_:)))
+		let control = Self.makeControl()
+		control.target = context.coordinator
+		control.action = #selector(Coordinator.changed(_:))
+		control.selectedSegment = Self.index(selection)
+		return control
+	}
+
+	/// The segments, their widths, symbols, tooltips and accessibility, without a target or a selection.
+	static func makeControl() -> NSSegmentedControl {
+		let control = NSSegmentedControl(labels: choices.map { _ in "" }, trackingMode: .selectOne, target: nil, action: nil)
 		control.controlSize = .regular
-		// "유지" in the size of the texts around it (the caption, the options), not the control's larger default; the
-		// symbols keep their size.
-		control.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-		for (index, view) in Self.choices.enumerated() {
+		control.font = font
+		for (index, view) in choices.enumerated() {
 			if let view {
 				let title = EditorText.viewTitle(view)
 				control.setImage(NSImage(systemSymbolName: Self.symbol(view), accessibilityDescription: title) ?? NSImage(), forSegment: index)
 				// The tooltip also names the shortcut (no menu shows it); the accessibility description stays the plain name.
 				control.setToolTip("\(title) (⌘\(index))", forSegment: index)
-				control.setWidth(Self.segmentWidth, forSegment: index)
+				control.setWidth(segmentWidth, forSegment: index)
 			} else {
 				control.setLabel(Fmt.keep, forSegment: index)
 				control.setToolTip("\(EditorText.result(nil)) (⌘0)", forSegment: index)
+				control.setWidth(keepWidth, forSegment: index)
 			}
 		}
 		control.setAccessibilityLabel(String(localized: "보기 방식"))
 		control.setAccessibilityIdentifier("editorViewPicker")
-		control.selectedSegment = Self.index(selection)
 		return control
 	}
 
