@@ -49,7 +49,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
     <td width="50%"><b>빠른 적용 단축키</b><br><br>프리셋에 별표를 하고 ⌃⌥⌘P 같은 단축키를 누르면 맨 앞 Finder 창의 폴더에 바로 적용됩니다. 단축키 지정 방법은 단계별 안내로 보여 줍니다.</td>
   </tr>
   <tr>
-    <td width="50%"><b>기록과 되돌리기</b><br><br>바꾸기 전에 항상 백업합니다. <b>기록</b>에서 원하는 작업을 골라 되돌릴 수 있습니다.</td>
+    <td width="50%"><b>기록과 되돌리기</b><br><br>바꾸기 전에 항상 백업합니다. <b>기록</b>(⌘Y)에서 원하는 작업을 골라 되돌릴 수 있습니다.</td>
     <td width="50%"><img src="docs/images/history-ko.png" alt="되돌리기가 있는 작업 기록" width="420"></td>
   </tr>
 </table>
@@ -63,7 +63,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ## 개인정보
 
 - **네이티브:** Swift/SwiftUI로 만들었고, 백그라운드 프로세스·메뉴 막대 상주·로그인 항목이 없습니다.
-- **오프라인:** 네트워크 요청, 계정, 사용 통계 수집이 없습니다. **최신 버전** 버튼은 릴리스 페이지를 브라우저로 열 뿐입니다.
+- **오프라인:** 네트워크 요청, 계정, 사용 통계 수집이 없습니다. 상태 막대의 버전 링크는 릴리스 페이지를 브라우저로 열 뿐입니다.
 - **안전한 쓰기:** 적용하는 폴더의 Finder 보기 설정(`.DS_Store`)만, 백업한 뒤에 씁니다. Finder 스크립트로 설정을 바꾸지 않습니다.
 - **로컬 데이터:** 프리셋, 폴더 목록, 작업 기록과 백업은 `~/Library/Application Support/FinderPresets`에 둡니다.
 
@@ -79,11 +79,17 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ./scripts/build-app.sh [debug|release]   # build/Finder Presets.app
 ./scripts/test.sh                        # 단위 테스트
 ./scripts/make-dmg.sh [version]          # build/FinderPresets-<version>.dmg
+FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # 개발용 CLI (테스트 폴더에 계획·적용·되돌리기)
 ```
 
 - **필요 환경:** Xcode 26 이상(Swift 6.2).
 - **릴리스:** `Resources/Info.plist`의 버전을 올리고 `.github/release-notes.md`에 바뀐 점을 적습니다(첫 줄 `# v<버전>`). `main`에 푸시해 CI를 통과하면 CI가 `v<버전>` 태그를 달고 DMG를 만들어 릴리스를 올립니다. 버전을 올리지 않고 앱을 바꾸면 CI가 실패합니다.
 - **테스트 데이터:** 개발 중에는 `FINDER_PRESETS_DATA_DIR`로 다른 폴더를 지정해 실제 프리셋과 기록을 건드리지 않게 합니다.
+- **UI 검사:** debug 빌드는 `--layout-probe`(고정 레이아웃, 두 언어, 라이트·다크)와 `--selftest`(앱 흐름 전체)를 실행할 수 있습니다. 방법은 [AGENTS.md](AGENTS.md)에 있습니다.
+
+## AI로 만든 과정
+
+기획과 판단은 제가 하고, 구현은 AI 코딩 에이전트(Claude Code)와 함께 했습니다. 결과는 단위 테스트 235개, CI, 앱 안의 레이아웃 검사, 실제 Finder에서 한 직접 테스트로 확인했습니다. 작업 방식과 주요 결정은 [만든 과정](docs/AI_DEVELOPMENT.ko.md)에, 코딩 에이전트가 작업 전에 읽는 안내는 [AGENTS.md](AGENTS.md)에 있습니다.
 
 ## 라이선스
 

@@ -49,7 +49,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
     <td width="50%"><b>Quick preset shortcut</b><br><br>Star a preset and press a shortcut such as ⌃⌥⌘P to apply it to the front Finder window's folder. A step-by-step guide shows where to set the shortcut.</td>
   </tr>
   <tr>
-    <td width="50%"><b>History and undo</b><br><br>Every change is backed up first. Pick any operation in History and undo it.</td>
+    <td width="50%"><b>History and undo</b><br><br>Every change is backed up first. Pick any operation in History (⌘Y) and undo it.</td>
     <td width="50%"><img src="docs/images/history-en.png" alt="History with undo" width="420"></td>
   </tr>
 </table>
@@ -63,7 +63,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ## Privacy
 
 - **Native:** Swift/SwiftUI; no background process, menu bar agent or login item.
-- **Offline:** no network requests, accounts or telemetry. **Latest Release** only opens the releases page in your browser.
+- **Offline:** no network requests, accounts or telemetry. The version link in the status bar only opens the releases page in your browser.
 - **Careful writes:** changes only the Finder view settings (`.DS_Store`) of the folders you apply to, after backing them up, never through Finder scripting.
 - **Local data:** presets, the folder list and the history with its backups stay in `~/Library/Application Support/FinderPresets`.
 
@@ -79,11 +79,17 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 ./scripts/build-app.sh [debug|release]   # build/Finder Presets.app
 ./scripts/test.sh                        # unit tests
 ./scripts/make-dmg.sh [version]          # build/FinderPresets-<version>.dmg
+FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # dev CLI (plan, apply, undo on test folders)
 ```
 
 - **Requires** Xcode 26 or later (Swift 6.2).
 - **Releases:** raise the version in `Resources/Info.plist` and write the changes in `.github/release-notes.md` (first line `# v<version>`). Once the push to `main` passes CI, CI tags `v<version>`, builds the DMG and publishes the release. Changing the app without a new version fails CI.
 - **Test data:** set `FINDER_PRESETS_DATA_DIR` to another folder so development runs don't touch your real presets and history.
+- **UI checks:** debug builds can run `--layout-probe` (fixed layout, both languages, light and dark) and `--selftest` (the app's flows end to end); [AGENTS.md](AGENTS.md) explains how.
+
+## Built with AI
+
+Designed and directed by me, implemented with AI coding agents (Claude Code), and checked by 235 unit tests, CI, an in-app layout probe and hands-on tests with the real Finder. [How it was built](docs/AI_DEVELOPMENT.md) describes the workflow and the decisions; [AGENTS.md](AGENTS.md) is the brief any coding agent reads before working here.
 
 ## License
 
