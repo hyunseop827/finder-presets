@@ -107,13 +107,15 @@ struct StatusBar: View {
 				.probeFrame("statusUndo")
 			}
 			// The window's other places as text links, not toolbar buttons: the history (⌘Y), the guide (⌘?) and this
-			// build's version, which opens GitHub's latest release page (ReleaseLink). The menus have the same three.
+			// update check (AppUpdater, like 앱 메뉴 > "업데이트 확인…"; its tooltip names this build's version).
 			Divider().frame(height: 12)
 			HStack(spacing: 12) {
 				FooterLink(Self.historyLabel, help: String(localized: "작업 기록 보기 · 되돌리기"), id: "history") { model.openHistory() }
 				FooterLink(Self.helpLabel, help: String(localized: "사용법 보기"), id: "help") { model.showHelp = true }
-				FooterLink(ReleaseLink.footerLabel(), symbol: "arrow.up.right", help: ReleaseLink.help(), id: "latestRelease",
-				           accessibilityName: ReleaseLink.fallbackLabel) { model.openLatestRelease() }
+				FooterLink(AppUpdater.linkName, help: AppUpdater.help(enabled: AppUpdater.shared.canCheck), id: "checkForUpdates") {
+					AppUpdater.shared.checkForUpdates()
+				}
+				.disabled(!AppUpdater.shared.canCheck)
 			}
 			.fixedSize()
 		}
@@ -132,61 +134,73 @@ extension StatusBar {
 	/// The links' names, left to right (the layout probe and AppHelpersTests.fixedLayoutBudget measure them).
 	static var historyLabel: String { String(localized: "기록") }
 	static var helpLabel: String { String(localized: "사용법") }
-	static func linkLabels(version: String? = ReleaseLink.appVersion) -> [String] {
-		[historyLabel, helpLabel, ReleaseLink.footerLabel(version: version)]
-	}
+	static var linkLabels: [String] { [historyLabel, helpLabel, AppUpdater.linkName] }
 }
 
 /// A text link for the status bar: secondary text that turns primary and underlined under the pointer, with the link
-/// pointer. Still a button for VoiceOver and Full Keyboard Access.
+/// pointer. Still a button for VoiceOver and Full Keyboard Access. A disabled link (the update check without an updater)
+/// is dimmed by the button and stays as it is under the pointer, so it does not look like something to click.
 struct FooterLink: View {
 	let title: String
-	let symbol: String?
 	let help: String
 	let id: String
-	let accessibilityName: String?
 	let action: () -> Void
+	@Environment(\.isEnabled) private var isEnabled
 	@State private var hovering = false
 
-	init(_ title: String, symbol: String? = nil, help: String, id: String, accessibilityName: String? = nil,
-	     action: @escaping () -> Void) {
+	init(_ title: String, help: String, id: String, action: @escaping () -> Void) {
 		self.title = title
-		self.symbol = symbol
 		self.help = help
 		self.id = id
-		self.accessibilityName = accessibilityName
 		self.action = action
 	}
 
 	var body: some View {
+		let highlighted = hovering && isEnabled
 		Button(action: action) {
-			HStack(spacing: 2) {
-				Text(title).underline(hovering)
-				if let symbol { Image(systemName: symbol).font(.caption2.weight(.semibold)) }
-			}
-			.foregroundStyle(hovering ? .primary : .secondary)
-			.contentShape(Rectangle())
+			Text(title)
+				.underline(highlighted)
+				.foregroundStyle(highlighted ? .primary : .secondary)
+				.contentShape(Rectangle())
 		}
 		.buttonStyle(.plain)
 		.font(.subheadline)
 		.onHover { hovering = $0 }
-		.modifier(LinkPointer())
+		.modifier(LinkPointer(active: isEnabled))
 		.help(help)
-		.accessibilityLabel(accessibilityName ?? title)
-		.accessibilityValue(accessibilityName == nil ? "" : title)
+		.accessibilityLabel(title)
 		.accessibilityIdentifier(id)
 		// Not just `id`: the probe drops every frame whose name starts with "help" when the guide sheet closes.
 		.probeFrame("link-" + id)
 	}
 }
 
-/// The pointing hand over a link: the system pointer style from macOS 15, the cursor stack before it.
+/// The pointing hand over a link that works: the system pointer style from macOS 15, the cursor stack before it. There
+/// the hand is pushed at most once and popped when the pointer leaves, the link is turned off or the link goes away, so
+/// a link that is disabled under the pointer never leaves the hand behind.
 private struct LinkPointer: ViewModifier {
+	let active: Bool
+	@State private var inside = false
+	@State private var pushed = false
+
 	func body(content: Content) -> some View {
 		if #available(macOS 15.0, *) {
-			content.pointerStyle(.link)
+			content.pointerStyle(active ? .link : nil)
 		} else {
-			content.onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
+			content
+				.onHover { now in
+					inside = now
+					update(inside: now, active: active)
+				}
+				.onChange(of: active) { _, now in update(inside: inside, active: now) }
+				.onDisappear { update(inside: false, active: active) }
 		}
+	}
+
+	private func update(inside: Bool, active: Bool) {
+		let wanted = inside && active
+		guard wanted != pushed else { return }
+		if wanted { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+		pushed = wanted
 	}
 }

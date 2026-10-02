@@ -17,7 +17,7 @@ Finder 보기를 프리셋으로 저장해 두고, 원하는 폴더와 그 하�
 **[최신 DMG 내려받기](https://github.com/hyunseop827/finder-presets/releases/latest/download/FinderPresets.dmg)** · 무료 · Apple Silicon · macOS 14 이상
 
 - **설치:** DMG를 열고 **Finder Presets**를 **응용 프로그램** 폴더로 끌어다 놓습니다.
-- **업데이트:** 앱을 종료하고 새 DMG의 앱으로 바꿉니다.
+- **업데이트:** 0.3.0부터는 앱 안에서 업데이트할 수 있습니다. **Finder Presets → 업데이트 확인…**(또는 창 오른쪽 아래의 **업데이트 확인**)을 누르면 바로 확인하고, 앱이 켜져 있는 동안에는 하루에 한 번 앱이 스스로 확인하기도 합니다. 새 버전이 있으면 바뀐 점을 보여 주고 설치할지 물어봅니다. **업데이트 설치**를 골라야만 새 버전을 내려받고, 받은 파일의 서명을 확인한 뒤 앱을 바꾸고 다시 엽니다. 앱은 꼭 **응용 프로그램** 폴더로 옮겨서 쓰세요. DMG 안에서 바로 연 앱은 스스로 업데이트하지 못합니다. 0.3.0 이전 버전에는 이 기능이 없으니 한 번만 새 DMG의 앱으로 바꾸세요.
 - **처음 실행:** ad-hoc 서명만 되어 있고 Apple 공증을 받지 않았습니다. macOS가 막으면 한 번 열어 본 뒤 **시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기**를 누르세요([Apple 안내](https://support.apple.com/ko-kr/guide/mac-help/mh40616/mac)).
 - **Finder 권한:** 앱이 처음 Finder를 다시 시작할 때 Finder 제어를 허용할지 물으면 허용하세요.
 - **변경 사항:** [릴리스 노트](https://github.com/hyunseop827/finder-presets/releases)에서 볼 수 있습니다.
@@ -62,15 +62,18 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 
 ## 개인정보
 
+- 계정이 없고 사용 기록을 모으지 않습니다.
+- 앱이 인터넷에 연결하는 것은 업데이트 확인뿐입니다. 앱이 켜져 있는 동안 하루에 한 번, 그리고 **업데이트 확인…**을 누를 때 GitHub에서 최신 릴리스의 업데이트 목록(`appcast.xml`)을 읽습니다. 사용자의 파일에 대한 정보는 보내지 않습니다.
+- 새 버전 파일(DMG)은 설치를 고를 때만 GitHub에서 내려받습니다. 받은 파일은 열기 전에 앱에 들어 있는 서명 키(EdDSA)로 확인합니다. 업데이트에는 [Sparkle](https://sparkle-project.org)을 씁니다.
+- Sparkle은 앱의 환경설정에 약간의 상태를 저장합니다(마지막으로 확인한 때, 건너뛴 버전, 창 위치).
 - **네이티브:** Swift/SwiftUI로 만들었고, 백그라운드 프로세스·메뉴 막대 상주·로그인 항목이 없습니다.
-- **오프라인:** 네트워크 요청, 계정, 사용 통계 수집이 없습니다. 상태 막대의 버전 링크는 릴리스 페이지를 브라우저로 열 뿐입니다.
 - **안전한 쓰기:** 적용하는 폴더의 Finder 보기 설정(`.DS_Store`)만, 백업한 뒤에 씁니다. Finder 스크립트로 설정을 바꾸지 않습니다.
 - **로컬 데이터:** 프리셋, 폴더 목록, 작업 기록과 백업은 `~/Library/Application Support/FinderPresets`에 둡니다.
 
 ## 삭제
 
 - 앱을 종료하고 `/Applications/Finder Presets.app`을 휴지통으로 옮깁니다.
-- 데이터까지 지우려면 `~/Library/Application Support/FinderPresets` 폴더를 지우고 `defaults delete com.hyunseop.FinderPresets`를 실행합니다.
+- 데이터까지 지우려면 `~/Library/Application Support/FinderPresets`, `~/Library/Caches/com.hyunseop.FinderPresets`, `~/Library/HTTPStorages/com.hyunseop.FinderPresets` 폴더를 지우고 `defaults delete com.hyunseop.FinderPresets`를 실행합니다.
 - 프리셋을 적용한 폴더는 그 보기를 유지합니다. 원래대로 돌리려면 먼저 **기록**에서 되돌리세요.
 
 ## 개발
@@ -89,9 +92,10 @@ FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # 개발용 CLI (테�
 
 ## AI로 만든 과정
 
-기획과 판단은 제가 하고, 구현은 AI 코딩 에이전트(Claude Code)와 함께 했습니다. 결과는 단위 테스트 235개, CI, 앱 안의 레이아웃 검사, 실제 Finder에서 한 직접 테스트로 확인했습니다. 작업 방식과 주요 결정은 [만든 과정](docs/AI_DEVELOPMENT.ko.md)에 있고, 에이전트는 [AGENTS.md](AGENTS.md)의 작업 규칙을 따릅니다.
+기획과 판단은 제가 하고, 구현은 AI 코딩 에이전트(Claude Code)와 함께 했습니다. 결과는 단위 테스트 249개, CI, 앱 안의 레이아웃 검사, 실제 Finder에서 한 직접 테스트로 확인했습니다. 작업 방식과 주요 결정은 [만든 과정](docs/AI_DEVELOPMENT.ko.md)에 있고, 에이전트는 [AGENTS.md](AGENTS.md)의 작업 규칙을 따릅니다.
 
 ## 라이선스
 
 - [MIT](LICENSE): 자유롭게 쓰고, 고치고, 배포할 수 있습니다. 보증은 없습니다.
 - `.DS_Store` 파일은 [sindresorhus/DSStore](https://github.com/sindresorhus/DSStore)(MIT)로 읽고 씁니다.
+- 업데이트는 [Sparkle](https://github.com/sparkle-project/Sparkle)(MIT)로 합니다.

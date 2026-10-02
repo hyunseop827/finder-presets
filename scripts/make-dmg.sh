@@ -15,7 +15,8 @@
 #                      App Store Connect API key (.p8 file). With all three the app and then the disk image are
 #                      notarized (xcrun notarytool submit --wait) and stapled; otherwise notarization is skipped.
 #   NOTARY_TIMEOUT     how long to wait for each notarization (default 30m)
-# Under GitHub Actions the results are also written to $GITHUB_OUTPUT: dmg, sha256, version, signed, notarized.
+# Under GitHub Actions the results are also written to $GITHUB_OUTPUT: app (the app inside the dmg), dmg, sha256, version,
+# signed, notarized.
 # The staging folder and the verification mount live in a temporary folder that is removed even on failure.
 set -e
 setopt pipefail
@@ -159,6 +160,7 @@ if [[ $SIGNED == true ]]; then echo "서명: Developer ID 인증서 (앱과 디�
 if [[ $NOTARIZED == true ]]; then echo "공증: 완료 (stapled)"; else echo "공증 안 됨"; fi
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
 	{
+		print -r -- "app=$APP"
 		print -r -- "dmg=$DMG"
 		print -r -- "sha256=$SHA"
 		print -r -- "version=$VERSION"

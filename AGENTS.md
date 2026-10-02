@@ -11,7 +11,9 @@ go-ahead in the conversation.
 Finder Presets is a native macOS 14+ app (Swift 6.2, SwiftUI, SwiftPM — no Xcode project) that saves Finder view
 settings as presets and applies them to folders, their subfolders, or Finder's default view. It writes the folders'
 `.DS_Store` records directly (through [sindresorhus/DSStore](https://github.com/sindresorhus/DSStore)), backs every
-change up first, keeps a history with undo, and has no background process, no network access and no telemetry.
+change up first, keeps a history with undo, and has no background process and no telemetry. Its only network access is
+the update check ([Sparkle 2](https://sparkle-project.org), `AppUpdater`): once a day, and when the user chooses
+"업데이트 확인…".
 
 ## Layout
 
@@ -22,8 +24,8 @@ change up first, keeps a history with undo, and has no background process, no ne
 | `Sources/finder-presets/` | A dev CLI for integration checks on test folders (not shipped in the DMG). |
 | `Tests/` | `FinderPresetsCoreTests`, `FinderPresetsTests` (app models, no window), `FinderPresetsCLITests`. |
 | `Resources/` | `Info.plist`, the icon, and `ko.lproj`/`en.lproj` strings. Korean is the source language. |
-| `scripts/` | `build-app.sh`, `test.sh`, `make-dmg.sh`, `make-icon.swift`, `toolchain.sh`, `select-xcode.sh` (CI). |
-| `.github/workflows/` | `ci.yml` (tests + release build); on `main` it calls `release.yml`. |
+| `scripts/` | `build-app.sh`, `test.sh`, `make-dmg.sh`, `make-icon.swift`, `toolchain.sh`, `select-xcode.sh` (CI); for the update feed of a release `make-appcast.sh` and `ed25519-verify.swift`, checked without a key by `check-release-tools.sh`; `check-update-key.sh` (the update key of the releases so far). |
+| `.github/workflows/` | `ci.yml` (update key, release tools without a key, tests, release build); on `main` it calls `release.yml`. |
 
 ## Commands
 
@@ -33,9 +35,17 @@ change up first, keeps a history with undo, and has no background process, no ne
 ./scripts/build-app.sh release             # release app (what the DMG ships)
 OUTPUT_DIR=/tmp/fp-app ./scripts/build-app.sh   # build somewhere else (keep build/ for the owner's own copy)
 /opt/homebrew/bin/actionlint .github/workflows/*.yml
+./scripts/check-release-tools.sh           # make-appcast.sh and ed25519-verify.swift, without a key
+./scripts/check-update-key.sh              # SUPublicEDKey against the published releases (needs gh)
 ```
 
 Xcode 26 or later is required (`scripts/toolchain.sh` picks it). Always finish with a green `./scripts/test.sh`.
+`UpdaterTests.thePublicKeyIsARealKey` guards the owner's update key in `Resources/Info.plist` (see "In-app updates" in
+[This repository](#this-repository)); never weaken it or work around it.
+
+Never run Sparkle's `generate_keys` or `sign_update`, and never run `make-appcast.sh` with a key, a test key included:
+only the owner creates and stores update keys, and only the owner and the release workflow sign with them (step 8).
+`check-release-tools.sh` is how an agent runs `make-appcast.sh`: it involves no key.
 
 ## Safety rules (non-negotiable)
 
@@ -49,7 +59,9 @@ Xcode 26 or later is required (`scripts/toolchain.sh` picks it). Always finish w
 - **Never change Finder's global defaults** (`com.apple.finder`) outside the app's own tested code path.
 - **Writes stay inside the folders the user chose.** The app refuses `/`, `/Users` and anything above the home folder,
   and skips `/Volumes`; keep it that way.
-- **No network code.** The only link out is `ReleaseLink`, which asks macOS to open the releases page.
+- **No network code of our own.** Updates go through Sparkle in `AppUpdater.swift`, the only file that imports it; its
+  settings, feed and key follow step 9 of [Changes and releases](#changes-and-releases). `ReleaseLink` only asks macOS
+  to open the releases page.
 - Commit, push, merge, tag and release only as [Changes and releases](#changes-and-releases) says (steps 6 and 8). Never
   put secrets, tokens or personal paths in the repo.
 
@@ -64,7 +76,7 @@ Xcode 26 or later is required (`scripts/toolchain.sh` picks it). Always finish w
 - **Quick preset:** reads the front Finder window's current view by Apple Event (Finder writes view changes lazily) and
   restarts Finder only when the view differs or is unknown.
 - **Fixed window:** the main window's content is always 720×440 (`UILayout`), nothing can push it; the layout probe
-  checks this. The window has no toolbar: History, the guide and the version link are text links in the status bar.
+  checks this. The window has no toolbar: History, the guide and the update check are text links in the status bar.
 
 ## Conventions
 
@@ -115,15 +127,15 @@ This is the owner's view of the whole flow; the steps below give the details.
 | Item | Value |
 | --- | --- |
 | Version | `CFBundleShortVersionString` in `Resources/Info.plist` (`X.Y.Z`), edited by hand |
-| Build number | `CFBundleVersion` is `1` in `Resources/Info.plist`; in released apps it is the CI run number, which `release.yml` passes to `scripts/make-dmg.sh` as `APP_BUILD`, so it is not edited by hand |
+| Build number | `CFBundleVersion` is `1` in `Resources/Info.plist` (an integer); in released apps it is the CI run number, which `release.yml` passes to `scripts/make-dmg.sh` as `APP_BUILD` (`scripts/build-app.sh` accepts only an integer from 1 up), so it is not edited by hand. Sparkle compares it: the release job stops before the tag if it is not higher than `sparkle:version` in the published `appcast.xml`, if that feed cannot be read, or if it is missing although a release with Sparkle is out |
 | App files (changing them needs a new version) | `Sources/`, `Resources/`, `Package.swift`, `Package.resolved`, `scripts/build-app.sh`, `scripts/make-icon.swift`, except `Sources/finder-presets/` (the dev CLI) and the debug-only `Sources/FinderPresets/SelfTest.swift` and `Sources/FinderPresets/LayoutProbe.swift` (`app_inputs` in `.github/workflows/release.yml`) |
-| Checks before shipping | Steps 1–4 of "Verifying a change": `./scripts/test.sh`; for UI changes the layout probe in both languages; for flows the self-test; `./scripts/build-app.sh release` without warnings. For workflow changes, `actionlint .github/workflows/*.yml`. Then the release checks below. |
-| Pull request checks in CI | `ci.yml`, job `test-and-build`: `./scripts/test.sh`, `./scripts/build-app.sh release`, then `codesign --verify`, `plutil -lint` and `lipo -archs` on the app |
-| Release assets | `FinderPresets-X.Y.Z.dmg` and `FinderPresets-X.Y.Z.dmg.sha256`, plus the same DMG under the fixed name `FinderPresets.dmg` with `FinderPresets.dmg.sha256`; the READMEs' download link and checksum commands use the fixed names through `releases/latest/download/`, so do not rename them |
-| Signing | The app is ad-hoc signed, the DMG is unsigned and nothing is notarized, unless the optional repository secrets for a Developer ID certificate (`MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `CODESIGN_IDENTITY`) and notarization (`NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_KEY_P8_BASE64`) are set; the published release's install note says which |
-| In-app updates | None: the status bar's version link and Help > Open Latest Release… (도움말 > 최신 버전 열기…) open the latest release page in the browser (`ReleaseLink`), and the app never checks for updates itself, so step 9 does not apply yet |
+| Checks before shipping | Steps 1–4 of "Verifying a change": `./scripts/test.sh` (its key-format test stops anything from shipping if `SUPublicEDKey` is not a real key); for UI changes the layout probe in both languages; for flows the self-test; `./scripts/build-app.sh release` without warnings. For workflow or release-script changes, `actionlint .github/workflows/*.yml`, `./scripts/check-release-tools.sh` and `./scripts/check-update-key.sh`. Then the release checks below. |
+| Pull request checks in CI | `ci.yml`, job `test-and-build` (checked out with the tags): `scripts/check-update-key.sh` (`SUPublicEDKey` must be the key of every published release that shipped with one), `scripts/check-release-tools.sh` (the feed script and the signature check, without a key), `./scripts/test.sh`, `./scripts/build-app.sh release`, then `codesign --verify`, `plutil -lint` and `lipo -archs` on the app, and the Sparkle bundle (framework inside without XPC services; the only run paths `@executable_path/../Frameworks` and `/usr/lib/swift`, which `scripts/build-app.sh` leaves after deleting the rest; the executable loads `@rpath/Sparkle.framework/Versions/B/Sparkle` once and otherwise only `/System/Library` and `/usr/lib`; hardened runtime; exactly the two entitlements). The build and the bundle check run even when the tests fail (the job still fails), so a build with the placeholder key is still built and inspected. The job uses no secret |
+| Release assets | `FinderPresets-X.Y.Z.dmg` and `FinderPresets-X.Y.Z.dmg.sha256`, plus the same DMG under the fixed name `FinderPresets.dmg` with `FinderPresets.dmg.sha256`, and `appcast.xml` (the update feed); the READMEs' download link and checksum commands and the app's `SUFeedURL` use these names through `releases/latest/download/`, so do not rename them |
+| Signing | The app is ad-hoc signed with the hardened runtime and `com.apple.security.cs.disable-library-validation` (so it loads the ad-hoc signed `Sparkle.framework`); `scripts/build-app.sh` signs Sparkle's `Autoupdate`, `Updater.app` and the framework from the inside out with `--options runtime`, then the app, and removes Sparkle's `XPCServices` (the app is not sandboxed). The DMG is unsigned and nothing is notarized, unless the optional repository secrets for a Developer ID certificate (`MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `CODESIGN_IDENTITY`) and notarization (`NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_KEY_P8_BASE64`) are set; the published release's install note says which |
+| In-app updates | Sparkle 2.10.0 (`Sources/FinderPresets/AppUpdater.swift`), set as step 9 says: `SUFeedURL` `https://github.com/hyunseop827/finder-presets/releases/latest/download/appcast.xml`, `SUEnableAutomaticChecks` true, `SUAllowsAutomaticUpdates` false, `SUVerifyUpdateBeforeExtraction` true, no `SUScheduledCheckInterval` (the default interval). The user checks with Finder Presets > 업데이트 확인… (Check for Updates…) in the menu bar or 업데이트 확인 (Check for Updates) in the status bar; both are always there and disabled while there is no updater. `AppUpdater` starts Sparkle itself (`startingUpdater: false`, then `updater.start()`; a failure is logged, never an alert) and only when the bundle has an `SUFeedURL` and an `SUPublicEDKey` that is the base64 of 32 bytes. `SUPublicEDKey` is the owner's public key `LUjkDNA4c1bXNCVI14eAeprdzoQDLkW1spSi+i3uAL4=`, set on 2026-10-02. Only the owner handles the key pair: the private key is in the owner's login keychain (account `finder-presets`) with an offline backup, and in the repository secret `SPARKLE_PRIVATE_KEY`. Never make a new key or change this one: installed copies accept only updates signed with the key they shipped with. If `SUPublicEDKey` were ever not a real key, the app would start no updater, the key-format test (`UpdaterTests.thePublicKeyIsARealKey`) would fail and a release would stop at its key check. The release job checks only whether that secret is set, signs the versioned DMG with it in one step, writes `appcast.xml` with `scripts/make-appcast.sh` and verifies it against `SUPublicEDKey` before tagging, then downloads the published DMG and feed again through `releases/latest/download/` and checks them (one item, the build number of the app inside the DMG, the version, the address, the length, the signature). `scripts/check-update-key.sh` stops a pull request and a release whose `SUPublicEDKey` is not the key of the releases already published. Nothing has shipped with Sparkle yet: 0.3.0 is the first version with it, and users of 0.1.0–0.2.1 install it by hand once. The READMEs' privacy text says the same as step 9. Help > Open Latest Release… (도움말 > 최신 버전 열기…) still opens the release page (`ReleaseLink`) |
 
-These pull request checks do not build the DMG, read `.github/release-notes.md`, compare the app files with a released tag, or check the version against existing tags. Only the release job on `main` does: its "버전과 릴리스 상태 확인" step checks that no tag is newer than the version, that the notes have `# vX.Y.Z` on the first line and some text under it, and, if that version is already released, that the app files have not changed since its tag; then, for a new version, its "DMG 만들기" step builds the DMG. `main` has no branch protection, so GitHub blocks a merge only on conflicts. Until pull request checks cover this, run these release checks in step 6a and again right before `gh pr merge`, each time right after `git fetch --tags origin`:
+Apart from the update key, these pull request checks do not build the DMG, read `.github/release-notes.md`, compare the app files with a released tag, or check the version against existing tags. Only the release job on `main` does: its "버전과 릴리스 상태 확인" step checks that no tag is newer than the version, that the notes have `# vX.Y.Z` on the first line and some text under it, and, if that version is already released, that the app files have not changed since its tag; then, for a new version, its "DMG 만들기" step builds the DMG. `main` has no branch protection, so GitHub blocks a merge only on conflicts. Until pull request checks cover this, run these release checks in step 6a and again right before `gh pr merge`, each time right after `git fetch --tags origin`:
 
 - The release of the highest tag (`git tag --list 'v*' --sort=-v:refname | head -n 1`) must be finished: `gh release view <tag> --json isDraft --jq .isDraft` prints `false`. If it prints `true` or finds no release, finish that release first (step 7) and merge nothing until it is done.
 - For an app change, the version must be higher than that highest tag.
@@ -138,6 +150,8 @@ These pull request checks do not build the DMG, read `.github/release-notes.md`,
   ```
 
 If a released version slips through anyway, the `main` run fails in "버전과 릴리스 상태 확인" before its tag step; handle it as step 7 says.
+
+To test an update locally, never use the real key, the real feed or the copy in `/Applications`. A test key is a private key too, so step 8 holds for it: the owner makes it under another keychain account (`generate_keys --account <another name>`) and runs what signs with it (`scripts/make-appcast.sh`, which accepts `http://127.0.0.1:<port>/…` or `http://localhost:<port>/…` as the download address). An agent prepares the rest: two versions built with `OUTPUT_DIR`, `APP_VERSION` and `APP_BUILD` (the second build number higher), both copies' `Contents/Info.plist` (never `Resources/Info.plist`) with their own bundle identifier, the public test key the owner hands over in `SUPublicEDKey`, `SUFeedURL` on `http://127.0.0.1:<port>/appcast.xml` and `LSEnvironment` `FINDER_PRESETS_DATA_DIR` (Sparkle relaunches through LaunchServices, which drops the shell's environment), both re-signed the way `scripts/build-app.sh` signs, the second version's DMG served with `python3 -m http.server --bind 127.0.0.1`, and the first copy installed outside `/Applications`. Remove the copies, their defaults, caches and saved state, the test key and the test feed afterwards.
 
 ### 1. Start
 

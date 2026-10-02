@@ -12,8 +12,8 @@ import FinderPresetsCore
 /// presets, exactly seven folders (with inherited, missing-preset and warning rows) and five presets, a folder added at
 /// the end of a long list, a long preset name, a preset or folder that sorts first added and selected, a new preset in
 /// the middle of a long list and the selected one deleted there, the error alert, the delete confirmation, the help
-/// sheet, the apply confirmation, the whole-system sheet, the status bar's three links ("기록", "사용법", the version: their
-/// text is not clipped, they lie inside the bar, overlap nothing, leave the status text its room, and the window has no
+/// sheet, the apply confirmation, the whole-system sheet, the status bar's three links ("기록", "사용법", "업데이트 확인":
+/// their text is not clipped, they lie inside the bar, overlap nothing, leave the status text its room, and the window has no
 /// toolbar), the preset editor (an existing preset, every value set with a
 /// long name and values that cannot be saved, a duplicate name, a new preset, values kept from the preset outside what
 /// the sliders offer, each on "유지" and each of the four views, then each segment of its view control clicked — in light
@@ -129,14 +129,14 @@ enum LayoutProbe {
 				return problems
 			}
 
-			/// The status bar's links ("기록", "사용법", the version): each is drawn, lies inside the bar, shows its whole text
-			/// (and the version its arrow), overlaps neither another link nor "되돌리기…", and leaves the status text at least
+			/// The status bar's links ("기록", "사용법", "업데이트 확인"): each is drawn, lies inside the bar, shows its whole
+			/// text, overlaps neither another link nor "되돌리기…", and leaves the status text at least
 			/// 250pt; the window has no toolbar. Measured on the links' own frames (`probeFrame`), in this run's language.
 			@MainActor func statusLinkProblems(_ step: String) -> [String] {
 				var problems: [String] = []
 				if let items = window.toolbar?.items, !items.isEmpty { problems.append("창에 툴바 항목이 있습니다 (\(items.count)개)") }
-				let ids = ["link-history", "link-help", "link-latestRelease"]
-				let labels = StatusBar.linkLabels()
+				let ids = ["link-history", "link-help", "link-checkForUpdates"]
+				let labels = StatusBar.linkLabels
 				guard let bar = frames["statusBar"] else { return ["\(step): 상태 막대의 프레임이 기록되지 않았습니다"] }
 				let links = ids.compactMap { frames[$0] }
 				guard links.count == ids.count else {
@@ -144,9 +144,8 @@ enum LayoutProbe {
 				}
 				let font = NSFont.preferredFont(forTextStyle: .subheadline)
 				let inside = bar.insetBy(dx: -0.5, dy: -0.5)
-				for (index, (text, frame)) in zip(labels, links).enumerated() {
-					// The text; the version link also has its arrow (about 10pt).
-					let needed = (text as NSString).size(withAttributes: [.font: font]).width + (index == 2 ? 10 : 0)
+				for (text, frame) in zip(labels, links) {
+					let needed = (text as NSString).size(withAttributes: [.font: font]).width
 					if frame.width + 1 < needed { problems.append("링크 \"\(text)\"의 글자가 잘립니다: \(Int(frame.width.rounded()))pt < \(Int(needed.rounded(.up)))pt") }
 					if frame.height < 10 { problems.append("링크 \"\(text)\"가 그려지지 않았습니다: \(rect(frame))") }
 					if !inside.contains(frame) { problems.append("링크 \"\(text)\"가 상태 막대 밖입니다: \(rect(frame)), 막대 \(rect(bar))") }

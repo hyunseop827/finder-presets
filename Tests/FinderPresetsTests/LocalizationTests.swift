@@ -241,6 +241,10 @@ import FinderPresetsCore
 		}) else {
 			throw Failure("FinderPresetsCore.swiftmodule not found next to the test bundle (\(products.path))")
 		}
+		// AppUpdater.swift imports Sparkle: SwiftPM leaves Sparkle.framework (a binary target) beside the test bundle.
+		guard fm.fileExists(atPath: products.appendingPathComponent("Sparkle.framework").path) else {
+			throw Failure("Sparkle.framework not found next to the test bundle (\(products.path))")
+		}
 		let out = fm.temporaryDirectory.appendingPathComponent("finder-presets-l10n-\(UUID().uuidString)")
 		try fm.createDirectory(at: out, withIntermediateDirectories: true)
 		defer { try? fm.removeItem(at: out) }
@@ -253,7 +257,7 @@ import FinderPresetsCore
 		let sdk = try await run(["--show-sdk-path"]).trimmingCharacters(in: .whitespacesAndNewlines)
 		var arguments = ["swiftc", "-c", "-parse-as-library", "-D", "DEBUG", "-swift-version", "6", "-module-name", "FinderPresets",
 		                 "-target", "\(arch)-apple-macosx14.0", "-sdk", sdk,
-		                 "-I", modules.path, "-wmo", "-Onone", "-o", out.appendingPathComponent("app.o").path,
+		                 "-I", modules.path, "-F", products.path, "-wmo", "-Onone", "-o", out.appendingPathComponent("app.o").path,
 		                 "-emit-localized-strings", "-emit-localized-strings-path", out.path]
 		// Command Line Tools only (scripts/toolchain.sh): SwiftUI's macro plugin comes from Xcode.
 		let developer = ProcessInfo.processInfo.environment["DEVELOPER_DIR"] ?? ""

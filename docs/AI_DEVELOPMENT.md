@@ -51,14 +51,15 @@ the process is as much a part of the project as the code.
 - **Safe scope.** The app refuses `/`, `/Users` and anything above your home folder (the system volume is read-only), and
   every change is backed up before it is written. History records a change before the folder is written, so undo can
   always reach it.
-- **A quieter window.** The toolbar's three buttons became text links in the status bar (기록 · 사용법 · version).
+- **A quieter window.** The toolbar's three buttons became text links in the status bar (기록 · 사용법 · 업데이트 확인).
 - **One icon, many drafts.** Several rounds of icon concepts were drawn in code and compared at Dock and Finder sizes; the
   two-tone folder won, and Apple's Finder face was avoided on purpose.
 - **Release by version number,** the same model as my other app [Menu Pulse](https://github.com/hyunseop827/menu-pulse).
+- **Updates inside the app (0.3.0).** Sparkle checks the release feed once a day and on 업데이트 확인…, and installs only when you choose; every update is verified with an EdDSA key whose private half only I hold. A local test on this Mac showed an ad-hoc signed copy updating itself and relaunching without Gatekeeper asking again, but with the app's hardened runtime and the daily check turned off; the settings this version ships with are not tested that way yet.
 
 ## By the numbers
 
-- 235 unit tests across the engine, the app models and the CLI; CI on every push.
+- 249 unit tests across the engine, the app models and the CLI; CI on every push.
 - A layout probe that checks the fixed window, every sheet and the status bar in Korean and English, light and dark.
 - A self-test that runs import → apply → undo → editor → services → quick preset without touching Finder.
 - Commits made with an agent carry a `Co-Authored-By: Claude` line.

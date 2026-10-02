@@ -707,8 +707,9 @@
 
 /* Finder windows opened again after a restart (FinderWindows), the latest release (ReleaseLink) */
 "Finder가 다시 시작되면 열려 있던 Finder 창이 다시 열립니다(검색·최근 항목 창 제외)." = "When Finder restarts, its open windows open again (not search or Recents).";
-"최신 버전" = "Latest Release";
 "최신 버전 열기…" = "Open Latest Release…";
-"GitHub의 최신 릴리스 페이지를 브라우저에서 엽니다. 앱은 업데이트를 직접 확인하지 않습니다." = "Opens GitHub's latest release page in your browser. The app never checks for updates itself.";
+"업데이트 확인…" = "Check for Updates…";
+"업데이트 확인" = "Check for Updates";
+"눌러서 업데이트를 확인합니다." = "Click to check for updates.";
 "이 앱은 %@ 버전입니다." = "This is version %@.";
 "최신 릴리스 페이지를 여는 데 실패했습니다. 직접 여세요: %@" = "Opening the latest release page failed. Open it yourself: %@";
