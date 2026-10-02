@@ -190,24 +190,23 @@ import DSStore
 	@Test func fixedLayoutBudget() throws {
 		let c = UILayout.content
 		#expect(c == CGSize(width: 720, height: 440))
-		// The status bar's right end: "되돌리기…" (when an apply just ran) and the three links ("기록", "사용법", the version,
-		// a long one here), in both languages, leave the status text at least 300pt beside the icon slot, the bar's edges
-		// and the gaps. Each link: its text (the version's arrow adds about 10pt), 12pt between them, the divider with its
+		// The status bar's right end: "되돌리기…" (when an apply just ran) and the three links ("기록", "사용법", "업데이트 확인"),
+		// in both languages, leave the status text at least 300pt beside the icon slot, the bar's edges
+		// and the gaps. Each link: its text, 12pt between them, the divider with its
 		// spacing (about 17pt); the layout probe measures the real frames (inside the bar, no overlap, nothing cut).
 		let english = try LocalizationTests.strings("en", "Localizable")
 		let small = NSFont.preferredFont(forTextStyle: .subheadline)
 		func width(_ text: String) -> CGFloat { (text as NSString).size(withAttributes: [.font: small]).width }
-		let version = "10.10.10"
-		#expect(StatusBar.linkLabels(version: version) == [StatusBar.historyLabel, StatusBar.helpLabel, "v" + version])
+		#expect(StatusBar.linkLabels == [StatusBar.historyLabel, StatusBar.helpLabel, AppUpdater.linkName])
 		let undo = String(localized: "되돌리기…")
 		for language in ["ko", "en"] {
 			func shown(_ text: String) throws -> String {
-				if language == "ko" || text.hasPrefix("v") { return text }
+				if language == "ko" { return text }
 				return try #require(english[text], "no English for \(text)")
 			}
-			let labels = try StatusBar.linkLabels(version: version).map(shown)
+			let labels = try StatusBar.linkLabels.map(shown)
 			let undoWidth = width(try shown(undo)) + 22
-			let links = labels.reduce(CGFloat(0)) { $0 + width($1) } + 10 + 2 * 12 + 17
+			let links = labels.reduce(CGFloat(0)) { $0 + width($1) } + 2 * 12 + 17
 			let text = c.width - 2 * UILayout.edge - 14 - 6 - undoWidth - 8 - links
 			#expect(text >= 300, "status bar (\(language)): \(labels) leave \(Int(text))pt for the status text")
 		}

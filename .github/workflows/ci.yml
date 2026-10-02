@@ -1,5 +1,13 @@
-# Unit tests and a release build of the app on every push to main and every pull request. On main, a passing run then
-# calls release.yml, which releases the version in Resources/Info.plist if it is new (see there).
+# Checks every push to main and every pull request: the update key of the releases so far, the tools only a release
+# runs (without a key), the unit tests, and a release build of the app with its bundle inspected. On main, a passing run
+# then calls release.yml, which releases the version in Resources/Info.plist if it is new (see there).
+#
+# When the unit tests fail, the build and the bundle check after them still run, and the job fails all the same: a
+# failing test (the update key's format test, for one) never hides whether the app still builds and passes the
+# inspection. A failed job never reaches the release job below.
+#
+# The `test-and-build` job uses no secrets, so pull requests never see one and need none. The `release` job runs only
+# for pushes to main and hands release.yml the repository secrets it uses, each by name.
 name: CI
 
 on:
@@ -28,27 +36,83 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 30
     steps:
-      - name: 체크아웃
+      # With the tags: the update key of every published release is read from its tag.
+      - name: 체크아웃 (태그 포함)
         uses: actions/checkout@v7
         with:
+          fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
 
       # Shared with release.yml. scripts/toolchain.sh then uses the Xcode chosen here.
       - name: Xcode 선택 (26 이상 중 최신 정식 버전)
         run: ./scripts/select-xcode.sh
 
+      # The check the release job makes before it publishes: SUPublicEDKey must be the key of every published release
+      # that shipped with one, so a changed key fails here, before the merge.
+      - name: 업데이트 키 확인 (지난 릴리스와 같은 키)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/check-update-key.sh
+
+      # scripts/make-appcast.sh and scripts/ed25519-verify.swift run for real only in a release on main. Here they are
+      # run without a key: published RFC 8032 test vectors and a stand-in for Sparkle's sign_update. A mistake in them
+      # shows on the pull request instead of in the release that needs them.
+      - name: 릴리스 도구 확인 (키 없이)
+        run: ./scripts/check-release-tools.sh
+
       - name: 단위 테스트
+        id: test
         run: ./scripts/test.sh
 
+      # From here on the steps also run when the tests above failed (see the top of this file), but not when the tests
+      # never started because an earlier step failed, and not when the run was cancelled.
       - name: 앱 빌드 (release, ad-hoc 서명)
+        id: build
+        if: ${{ !cancelled() && steps.test.outcome != 'skipped' }}
         run: ./scripts/build-app.sh release
 
+      # Only with an app to look at.
       - name: 앱 번들 확인
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           app="build/Finder Presets.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           plutil -lint "$app/Contents/Info.plist"
           lipo -archs "$app/Contents/MacOS/FinderPresets"
+          # Sparkle: the framework is inside without the XPC services; the binary's only run paths are Contents/Frameworks
+          # and the system's Swift libraries; the app has the hardened runtime and exactly its two entitlements. Outputs are
+          # read into variables (no `| grep -q`: under pipefail its early exit kills the writer with SIGPIPE).
+          fw="$app/Contents/Frameworks/Sparkle.framework"
+          [[ -d "$fw" && ! -e "$fw/Versions/B/XPCServices" ]] || { echo "::error::Sparkle.framework 가 없거나 XPCServices 가 남았습니다."; exit 1; }
+          load_commands="$(otool -l "$app/Contents/MacOS/FinderPresets")"
+          rpaths="$(awk '$1 == "cmd" && $2 == "LC_RPATH" { getline; getline; print $2 }' <<< "$load_commands" | LC_ALL=C sort | tr '\n' ' ')"
+          [[ "$rpaths" == "/usr/lib/swift @executable_path/../Frameworks " ]] || { echo "::error::실행 파일의 rpath 가 예상과 다릅니다: $rpaths"; exit 1; }
+          # What the executable loads: Sparkle.framework through @rpath, exactly once, and otherwise only libraries that
+          # are part of macOS (/System/Library, /usr/lib) — the rule scripts/build-app.sh applies before it assembles the
+          # bundle, checked again on what was shipped into it.
+          libraries="$(otool -L "$app/Contents/MacOS/FinderPresets" | awk 'NR > 1 { print $1 }')"
+          sparkle_loads=0
+          foreign=()
+          while IFS= read -r library; do
+            case "$library" in
+              */../*|*/..) foreign+=("$library") ;;
+              @rpath/Sparkle.framework/Versions/B/Sparkle) sparkle_loads=$((sparkle_loads + 1)) ;;
+              /System/Library/*|/usr/lib/*) ;;
+              *) foreign+=("$library") ;;
+            esac
+          done <<< "$libraries"
+          if (( sparkle_loads != 1 || ${#foreign[@]} > 0 )); then
+            echo "::error::실행 파일은 Sparkle.framework 하나(@rpath/Sparkle.framework/Versions/B/Sparkle)와 macOS에 들어 있는 라이브러리(/System/Library, /usr/lib)만 불러와야 합니다 (Sparkle ${sparkle_loads}번, 그 밖의 라이브러리: ${foreign[*]:-없음})."
+            exit 1
+          fi
+          signature="$(codesign -dv "$app" 2>&1)"
+          [[ "$signature" == *flags=*runtime* ]] || { echo "::error::앱에 hardened runtime 이 없습니다."; exit 1; }
+          entitlements="$RUNNER_TEMP/finder-presets-entitlements.plist"
+          codesign -d --entitlements - --xml "$app" > "$entitlements"
+          keys="$(plutil -convert json -o - "$entitlements")"
+          [[ "$keys" == '{"com.apple.security.automation.apple-events":true,"com.apple.security.cs.disable-library-validation":true}' ]] \
+            || { echo "::error::앱의 entitlements 가 예상과 다릅니다: $keys"; exit 1; }
 
   release:
     name: 릴리스
@@ -57,4 +121,14 @@ jobs:
     permissions:
       contents: write
     uses: ./.github/workflows/release.yml
-    secrets: inherit
+    # By name, not `secrets: inherit`: release.yml gets these and no other secret the repository may gain later. Each is
+    # empty when the owner has not registered it; release.yml then decides (without the update key a run that would
+    # publish stops, with instructions; without the certificate or notarization secrets the app stays ad-hoc signed).
+    secrets:
+      SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+      MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+      NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+      NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+      NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}

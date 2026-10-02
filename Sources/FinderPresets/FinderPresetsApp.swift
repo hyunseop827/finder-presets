@@ -18,6 +18,9 @@ struct FinderPresetsApp: App {
 		let model = AppModel()
 		_model = State(initialValue: model)
 		FinderServiceProvider.shared.attach(model)
+		// Sparkle's updater, started with the app when Info.plist has a feed and a real key (AppUpdater.swift): it checks
+		// once a day and when the user asks.
+		_ = AppUpdater.shared
 	}
 
 	var body: some Scene {
@@ -44,10 +47,16 @@ struct FinderPresetsApp: App {
 		.windowResizability(.contentSize)
 		.commands {
 			CommandGroup(replacing: .newItem) {}
+			// 앱 메뉴 > "업데이트 확인…", right below "Finder Presets에 관하여". Always there; disabled without an updater (no
+			// real key yet, or not run from the app bundle) and while Sparkle's window already shows a check or an update.
+			// Sparkle's own window shows the result, so an open sheet does not stop it.
+			CommandGroup(after: .appInfo) {
+				Button(AppUpdater.menuTitle) { AppUpdater.shared.checkForUpdates() }
+					.disabled(!AppUpdater.shared.canCheck)
+			}
 			// 도움말 > "Finder Presets 사용법" (⌘?) opens the guide sheet. The app has no Help Book, so the standard
 			// "… 도움말" item would only say that no help is available. "최신 버전 열기…" opens GitHub's latest release
-			// page in the browser, like the status bar's version link (ReleaseLink); it opens nothing in the app, so a dialog
-			// does not stop it.
+			// page in the browser (ReleaseLink); it opens nothing in the app, so a dialog does not stop it.
 			CommandGroup(replacing: .help) {
 				Button(String(localized: "Finder Presets 사용법")) { openFromMenu { model.showHelp = true } }
 					.keyboardShortcut("?", modifiers: .command)

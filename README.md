@@ -17,7 +17,7 @@ Save a Finder view as a preset and apply it to any folder, to all its subfolders
 **[Download the latest DMG](https://github.com/hyunseop827/finder-presets/releases/latest/download/FinderPresets.dmg)** · Free · Apple Silicon · macOS 14 or later
 
 - **Install:** open the DMG and drag **Finder Presets** to **Applications**.
-- **Update:** quit the app and replace it with the one from the new DMG.
+- **Update:** from 0.3.0 on, the app updates itself. Choose **Finder Presets → Check for Updates…** (or **Check for Updates** at the bottom right of the window) to check right away; while it is running, the app also checks once a day on its own. When there is a newer version, it shows what changed and asks. Only when you choose **Install Update** does it download the new version, verify its signature, replace the app and reopen it. Keep the app in **Applications**. An app opened inside the DMG cannot update itself. Versions before 0.3.0 have no updater: replace the app with the one from the new DMG once.
 - **First launch:** the app is ad-hoc signed and not notarized by Apple. If macOS blocks it, try opening it once, then choose **System Settings → Privacy & Security → Open Anyway** ([Apple's instructions](https://support.apple.com/guide/mac-help/mh40616/mac)).
 - **Finder permission:** when the app first restarts Finder, macOS asks to let it control Finder. Allow it.
 - **What's new:** see the [release notes](https://github.com/hyunseop827/finder-presets/releases).
@@ -62,15 +62,18 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 
 ## Privacy
 
+- No accounts and no usage tracking.
+- The only thing the app uses the internet for is the update check. Once a day while it is running, and when you choose **Check for Updates…**, it reads the latest release's list of updates (`appcast.xml`) from GitHub. Nothing about your files is sent.
+- The new version is downloaded from GitHub only when you choose to install it, and it is checked against the signing key (EdDSA) inside the app before it is opened. Updates are handled by [Sparkle](https://sparkle-project.org).
+- Sparkle keeps a little state in the app's preferences (when it last checked, a skipped version, window positions).
 - **Native:** Swift/SwiftUI; no background process, menu bar agent or login item.
-- **Offline:** no network requests, accounts or telemetry. The version link in the status bar only opens the releases page in your browser.
 - **Careful writes:** changes only the Finder view settings (`.DS_Store`) of the folders you apply to, after backing them up, never through Finder scripting.
 - **Local data:** presets, the folder list and the history with its backups stay in `~/Library/Application Support/FinderPresets`.
 
 ## Removal
 
 - Quit the app and move `/Applications/Finder Presets.app` to Trash.
-- To remove its data too, delete `~/Library/Application Support/FinderPresets` and run `defaults delete com.hyunseop.FinderPresets`.
+- To remove its data too, delete `~/Library/Application Support/FinderPresets`, `~/Library/Caches/com.hyunseop.FinderPresets` and `~/Library/HTTPStorages/com.hyunseop.FinderPresets` and run `defaults delete com.hyunseop.FinderPresets`.
 - Folders keep the views you applied. To get the old views back, undo them in **History** first.
 
 ## Development
@@ -89,9 +92,10 @@ FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # dev CLI (plan, appl
 
 ## Built with AI
 
-Designed and directed by me, implemented with AI coding agents (Claude Code), and checked by 235 unit tests, CI, an in-app layout probe and hands-on tests with the real Finder. [How it was built](docs/AI_DEVELOPMENT.md) describes the workflow and the decisions; the agents follow [AGENTS.md](AGENTS.md), the rules for any coding agent working here.
+Designed and directed by me, implemented with AI coding agents (Claude Code), and checked by 249 unit tests, CI, an in-app layout probe and hands-on tests with the real Finder. [How it was built](docs/AI_DEVELOPMENT.md) describes the workflow and the decisions; the agents follow [AGENTS.md](AGENTS.md), the rules for any coding agent working here.
 
 ## License
 
 - [MIT](LICENSE): use, modify, and distribute freely; provided as-is without warranty.
 - Reads and writes `.DS_Store` files with [sindresorhus/DSStore](https://github.com/sindresorhus/DSStore) (MIT).
+- Updates itself with [Sparkle](https://github.com/sparkle-project/Sparkle) (MIT).

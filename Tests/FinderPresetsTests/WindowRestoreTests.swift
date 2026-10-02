@@ -8,7 +8,8 @@ import FinderPresetsCore
 /// which are opened after them — and before Finder is given its moment to settle and the writes are read back. Nothing is
 /// opened when Finder does not quit or does not come back; a Finder that goes away while it settles is launched once
 /// more. With the fake Finder (`HistoryModelTests.FakeFinder`), temporary folders and a throwaway defaults domain: the real
-/// Finder, the real home and the data folder are never touched. Also "최신 버전" (ReleaseLink).
+/// Finder, the real home and the data folder are never touched. Also where "업데이트 확인…" sits (the updater itself is
+/// UpdaterTests') and "최신 버전 열기…" (ReleaseLink).
 @MainActor @Suite struct WindowRestoreTests {
 	typealias FakeFinder = HistoryModelTests.FakeFinder
 
@@ -285,11 +286,11 @@ import FinderPresetsCore
 		for run in [stopped, folderError, overwritten, down, failed] { #expect(AppModel.systemApplyNeedsAttention(run)) }
 	}
 
-	// MARK: "최신 버전" (ReleaseLink)
+	// MARK: "최신 버전 열기…" (ReleaseLink)
 
 	/// One constant, well formed, pointing at this repository's latest release on GitHub; the app's sources spell the
 	/// address nowhere else. Opening asks the opener for exactly that address; when it cannot, the status line is a
-	/// warning that gives the address. The tooltip names the version when there is one.
+	/// warning that gives the address.
 	@Test func latestReleaseLinkIsOneWellFormedConstant() throws {
 		let url = ReleaseLink.latest
 		#expect(url.scheme == "https" && url.host == "github.com" && url.path == "/hyunseop827/finder-presets/releases/latest")
@@ -301,10 +302,6 @@ import FinderPresetsCore
 		let failure = try #require(ReleaseLink.open { _ in false })
 		#expect(failure.contains(url.absoluteString) && StatusBar.tone(status: failure, working: false) == .warning)
 
-		let page = String(localized: "GitHub의 최신 릴리스 페이지를 브라우저에서 엽니다. 앱은 업데이트를 직접 확인하지 않습니다.")
-		#expect(ReleaseLink.help(version: "1.2.3") == String(localized: "이 앱은 \("1.2.3") 버전입니다.") + " " + page)
-		#expect(ReleaseLink.help(version: nil) == page)
-
 		// The address lives in ReleaseLink.swift only.
 		let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 			.appendingPathComponent("Sources/FinderPresets")
@@ -315,25 +312,43 @@ import FinderPresetsCore
 		#expect(spelling.map(\.lastPathComponent) == ["ReleaseLink.swift"])
 	}
 
-	/// The status bar's version link and 도움말 > "최신 버전 열기…" both go through `AppModel.openLatestRelease` (read from
-	/// the sources: SwiftUI's views and menus cannot be built without a window). The link shows this build's version, VoiceOver
-	/// calls it "최신 버전", and the window has no toolbar any more: the history and the guide are links beside it.
-	@Test func statusBarLinkAndHelpMenuOpenTheLatestRelease() throws {
+	/// The status bar's "업데이트 확인" and 앱 메뉴 > "업데이트 확인…" both run a user-initiated Sparkle check
+	/// (`AppUpdater.checkForUpdates`), and 도움말 > "최신 버전 열기…" still opens the release page (read from the sources:
+	/// SwiftUI's views and menus cannot be built without a window). Both update controls are always there and follow
+	/// `AppUpdater.canCheck`: disabled without an updater (the placeholder key, or not run from the bundle) and while
+	/// Sparkle's window shows a check. The link says "업데이트 확인" like the menu item, its tooltip names this build's
+	/// version (and what a click does only while it is enabled), a disabled link does not light up under the pointer, and
+	/// the window has no toolbar: the history and the guide are links beside it.
+	@Test func statusBarLinkAndAppMenuCheckForUpdates() throws {
 		let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 		let views = root.appendingPathComponent("Sources/FinderPresets/Views")
 		let bar = try String(contentsOf: views.appendingPathComponent("StatusBar.swift"), encoding: .utf8)
 		let main = try String(contentsOf: views.appendingPathComponent("MainView.swift"), encoding: .utf8)
 		let app = try String(contentsOf: root.appendingPathComponent("Sources/FinderPresets/FinderPresetsApp.swift"), encoding: .utf8)
-		#expect(bar.contains("model.openLatestRelease()") && bar.contains("id: \"latestRelease\"") && bar.contains("help: ReleaseLink.help()"))
+		#expect(bar.contains("AppUpdater.shared.checkForUpdates()") && bar.contains("id: \"checkForUpdates\"")
+		        && bar.contains("help: AppUpdater.help(enabled: AppUpdater.shared.canCheck)"))
 		#expect(bar.contains("id: \"history\") { model.openHistory() }") && bar.contains("id: \"help\") { model.showHelp = true }"))
 		#expect(!main.contains(".toolbar"))
+		let appMenu = try #require(app.range(of: "CommandGroup(after: .appInfo)"))
+		let appMenuItems = app[appMenu.upperBound...].prefix(300)
+		#expect(appMenuItems.contains("Button(AppUpdater.menuTitle) { AppUpdater.shared.checkForUpdates() }"))
+		#expect(appMenuItems.contains(".disabled(!AppUpdater.shared.canCheck)") && !app.contains("AppUpdater.shared.isAvailable"),
+		        "the menu item is always there, disabled without an updater")
+		#expect(bar.contains("\tAppUpdater.shared.checkForUpdates()\n\t\t\t\t}\n\t\t\t\t.disabled(!AppUpdater.shared.canCheck)"))
+		#expect(bar.contains("let highlighted = hovering && isEnabled") && bar.contains(".modifier(LinkPointer(active: isEnabled))")
+		        && bar.contains("content.pointerStyle(active ? .link : nil)"), "a disabled link gets no underline, colour or link pointer")
 		let help = try #require(app.range(of: "CommandGroup(replacing: .help)"))
 		#expect(app[help.upperBound...].prefix(600).contains("Button(ReleaseLink.menuTitle) { model.openLatestRelease() }"))
 
-		#expect(ReleaseLink.footerLabel(version: "1.2.3") == "v1.2.3" && ReleaseLink.footerLabel(version: nil) == ReleaseLink.fallbackLabel)
-		#expect(StatusBar.linkLabels(version: "1.2.3").last == "v1.2.3")
+		#expect(bar.contains("FooterLink(AppUpdater.linkName, help: AppUpdater.help(") && StatusBar.linkLabels.last == AppUpdater.linkName)
+		let action = String(localized: "눌러서 업데이트를 확인합니다.")
+		#expect(AppUpdater.help(version: "1.2.3") == String(localized: "이 앱은 \("1.2.3") 버전입니다.") + " " + action)
+		#expect(AppUpdater.help(version: nil) == action)
+		#expect(AppUpdater.help(version: "1.2.3", enabled: false) == String(localized: "이 앱은 \("1.2.3") 버전입니다."))
+		#expect(AppUpdater.help(version: nil, enabled: false).isEmpty)
 		let english = try LocalizationTests.strings("en", "Localizable")
-		#expect(english[ReleaseLink.fallbackLabel] == "Latest Release" && english[ReleaseLink.menuTitle] == "Open Latest Release…")
+		#expect(english[AppUpdater.menuTitle] == "Check for Updates…" && english[AppUpdater.linkName] == "Check for Updates")
+		#expect(english[ReleaseLink.menuTitle] == "Open Latest Release…")
 		#expect(english[StatusBar.historyLabel] == "History" && english[StatusBar.helpLabel] != nil)
 	}
 }

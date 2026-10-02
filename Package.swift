@@ -9,7 +9,10 @@ let package = Package(
 		.executable(name: "FinderPresets", targets: ["FinderPresets"])
 	],
 	dependencies: [
-		.package(url: "https://github.com/sindresorhus/DSStore", from: "0.1.0")
+		.package(url: "https://github.com/sindresorhus/DSStore", from: "0.1.0"),
+		// "업데이트 확인…" (Sources/FinderPresets/AppUpdater.swift). Exact: the release workflow signs updates with the
+		// sign_update of this same Sparkle version, and scripts/build-app.sh embeds and re-signs this framework.
+		.package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0")
 	],
 	targets: [
 		.target(
@@ -22,7 +25,9 @@ let package = Package(
 		),
 		.executableTarget(
 			name: "FinderPresets",
-			dependencies: ["FinderPresetsCore"]
+			dependencies: ["FinderPresetsCore", .product(name: "Sparkle", package: "Sparkle")],
+			// The app bundle carries Sparkle.framework in Contents/Frameworks (scripts/build-app.sh).
+			linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
 		),
 		.testTarget(
 			name: "FinderPresetsCoreTests",
