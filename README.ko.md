@@ -83,13 +83,13 @@ FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # 개발용 CLI (테�
 ```
 
 - **필요 환경:** Xcode 26 이상(Swift 6.2).
-- **릴리스:** `Resources/Info.plist`의 버전을 올리고 `.github/release-notes.md`에 바뀐 점을 적습니다(첫 줄 `# v<버전>`). `main`에 푸시해 CI를 통과하면 CI가 `v<버전>` 태그를 달고 DMG를 만들어 릴리스를 올립니다. 버전을 올리지 않고 앱을 바꾸면 CI가 실패합니다.
+- **릴리스:** 새 버전은 `main`에서 CI가 올립니다. 변경이 그곳까지 가는 과정은 [AGENTS.md](AGENTS.md)에 있습니다.
 - **테스트 데이터:** 개발 중에는 `FINDER_PRESETS_DATA_DIR`로 다른 폴더를 지정해 실제 프리셋과 기록을 건드리지 않게 합니다.
 - **UI 검사:** debug 빌드는 `--layout-probe`(고정 레이아웃, 두 언어, 라이트·다크)와 `--selftest`(앱 흐름 전체)를 실행할 수 있습니다. 방법은 [AGENTS.md](AGENTS.md)에 있습니다.
 
 ## AI로 만든 과정
 
-기획과 판단은 제가 하고, 구현은 AI 코딩 에이전트(Claude Code)와 함께 했습니다. 결과는 단위 테스트 235개, CI, 앱 안의 레이아웃 검사, 실제 Finder에서 한 직접 테스트로 확인했습니다. 작업 방식과 주요 결정은 [만든 과정](docs/AI_DEVELOPMENT.ko.md)에, 코딩 에이전트가 작업 전에 읽는 안내는 [AGENTS.md](AGENTS.md)에 있습니다.
+기획과 판단은 제가 하고, 구현은 AI 코딩 에이전트(Claude Code)와 함께 했습니다. 결과는 단위 테스트 235개, CI, 앱 안의 레이아웃 검사, 실제 Finder에서 한 직접 테스트로 확인했습니다. 작업 방식과 주요 결정은 [만든 과정](docs/AI_DEVELOPMENT.ko.md)에 있고, 에이전트는 [AGENTS.md](AGENTS.md)의 작업 규칙을 따릅니다.
 
 ## 라이선스
 
