@@ -83,13 +83,13 @@ FINDER_PRESETS_DATA_DIR=/tmp/fp swift run finder-presets   # dev CLI (plan, appl
 ```
 
 - **Requires** Xcode 26 or later (Swift 6.2).
-- **Releases:** raise the version in `Resources/Info.plist` and write the changes in `.github/release-notes.md` (first line `# v<version>`). Once the push to `main` passes CI, CI tags `v<version>`, builds the DMG and publishes the release. Changing the app without a new version fails CI.
+- **Releases:** CI publishes each new version from `main`; [AGENTS.md](AGENTS.md) explains how changes get there.
 - **Test data:** set `FINDER_PRESETS_DATA_DIR` to another folder so development runs don't touch your real presets and history.
 - **UI checks:** debug builds can run `--layout-probe` (fixed layout, both languages, light and dark) and `--selftest` (the app's flows end to end); [AGENTS.md](AGENTS.md) explains how.
 
 ## Built with AI
 
-Designed and directed by me, implemented with AI coding agents (Claude Code), and checked by 235 unit tests, CI, an in-app layout probe and hands-on tests with the real Finder. [How it was built](docs/AI_DEVELOPMENT.md) describes the workflow and the decisions; [AGENTS.md](AGENTS.md) is the brief any coding agent reads before working here.
+Designed and directed by me, implemented with AI coding agents (Claude Code), and checked by 235 unit tests, CI, an in-app layout probe and hands-on tests with the real Finder. [How it was built](docs/AI_DEVELOPMENT.md) describes the workflow and the decisions; the agents follow [AGENTS.md](AGENTS.md), the rules for any coding agent working here.
 
 ## License
 

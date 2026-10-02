@@ -15,7 +15,7 @@ the process is as much a part of the project as the code.
 | Wrote the requirements, in Korean, one conversation at a time | Turned them into plans, code and tests in small steps |
 | Made every product decision (what the shortcut does, how errors read, the icon, the README) | Proposed options with trade-offs, and recommended one |
 | Tested on the real Finder from checklists the agent prepared | Prepared test folders and checklists, then verified the results and cleaned up |
-| Approved every outward step: pushing, releasing, publishing | Never pushed, tagged or published without that approval |
+| Decided when each change shipped: nothing went out without my go-ahead ("올려", ship it) | Prepared the version and the release notes, shipped only on "올려", and never tagged or published by hand: CI does that |
 
 ## The workflow
 
@@ -30,8 +30,9 @@ the process is as much a part of the project as the code.
    app state, UI and translations, CLI and CI, dead code, tests), and a separate skeptic tries to refute every finding
    before anything is changed. In the latest round 56 findings came back, 55 survived, and they were fixed in five
    sequential groups, each ending with a green test run.
-6. **Ship through CI.** Raising the version in `Info.plist` and pushing is the whole release: CI tests, builds the DMG,
-   tags, publishes, and downloads the README's link again to check it.
+6. **Ship through CI.** For an app change the agent raises the version in `Info.plist` and writes the release notes.
+   When I say "올려" (ship it), it commits, opens a pull request and merges it once CI passes; CI on `main` then builds
+   the DMG, tags, publishes, and downloads the README's link again to check it. Agents never tag or publish by hand.
 
 [AGENTS.md](../AGENTS.md) is the written version of the rules the agents follow here, so any agent can pick the work up.
 
