@@ -96,6 +96,20 @@ Xcode 26 or later is required (`scripts/toolchain.sh` picks it). Always finish w
 
 The owner develops by asking an agent for changes. The agent prepares the version and the release notes; GitHub Actions tags and publishes. Steps 1–9 are kept in English and are meant to be the same, word for word, in the owner's three apps (Hangeul Filename Fixer, Menu Pulse, Finder Presets); only "This repository" differs. If a step needs to change, tell the owner instead of changing it here alone. When copying the steps into a repository, remove its older instructions that repeat or contradict them; keep repository-specific rules, such as how to test an updater safely or which asset names it needs.
 
+### The nine stages
+
+This is the owner's view of the whole flow; the steps below give the details.
+
+1. The owner asks for a change, and the agent works on a branch from an up-to-date `main` (step 1).
+2. While developing, the agent writes the new version number and the release notes in `.github/release-notes.md` (steps 2–3). Nobody writes a tag; the version number becomes the tag name later.
+3. The owner says "올려".
+4. The agent runs the checks, commits, pushes the branch and opens a pull request (step 6).
+5. CI checks the pull request. `main` does not change yet, and nothing is tagged or released from a pull request.
+6. When every check has passed, the agent squash-merges the pull request; when one fails, it fixes the branch and pushes again (steps 6–7). Branch protection keeps unchecked changes out of `main`.
+7. On `main`, CI releases a new version: it builds and checks the DMG, then tags `vX.Y.Z`, then publishes the release with the notes written in stage 2 as its text, and downloads the published files again to check them. A change that keeps the version releases nothing.
+8. The agent reports the result (step 6).
+9. Installed copies learn about the new version from their in-app updater: with Sparkle, once a day, and the user chooses to install (step 9).
+
 ### This repository
 
 | Item | Value |
