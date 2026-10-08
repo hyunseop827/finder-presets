@@ -311,8 +311,9 @@ private let publishedTestKey = "11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo="
 		#expect(valueUsed.count == 3, "the key's value is read where it is taken, checked and handed to sign_update: \(valueUsed)")
 	}
 
-	/// Pull requests check the update key and run the release tools without a key, and while the key-format test fails
-	/// (the placeholder), the app is still built and inspected: the steps after the tests do not depend on their result.
+	/// Pull requests check the update key, make the release decisions without publishing (scripts/release-check.sh
+	/// --check) and run the release tools without a key, and while the key-format test fails (the placeholder), the app is
+	/// still built and inspected (an arm64-only executable): the steps after the tests do not depend on their result.
 	@Test func pullRequestsCheckTheReleaseToolsAndStillBuildWhenTheTestsFail() throws {
 		let ci = try Repository.lines(".github/workflows/ci.yml")
 		func step(_ name: String) throws -> [String] {
@@ -323,22 +324,25 @@ private let publishedTestKey = "11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo="
 
 		#expect(ci.contains("          fetch-depth: 0") && ci.contains("          fetch-tags: true"), "the update keys are read from the tags")
 		#expect(try step("업데이트 키 확인 (지난 릴리스와 같은 키)").contains("run: ./scripts/check-update-key.sh"))
+		#expect(try step("버전·태그·릴리스 노트 확인").contains("run: ./scripts/release-check.sh --check"))
 		#expect(try step("릴리스 도구 확인 (키 없이)").contains("run: ./scripts/check-release-tools.sh"))
 		let tests = try step("단위 테스트")
 		#expect(tests.contains("id: test") && tests.contains("run: ./scripts/test.sh") && !tests.contains { $0.hasPrefix("if:") })
 		let build = try step("앱 빌드 (release, ad-hoc 서명)")
 		#expect(build.contains("if: ${{ !cancelled() && steps.test.outcome != 'skipped' }}") && build.contains("id: build"))
-		#expect(try step("앱 번들 확인").contains("if: ${{ !cancelled() && steps.build.outcome == 'success' }}"))
+		let bundle = try step("앱 번들 확인")
+		#expect(bundle.contains("if: ${{ !cancelled() && steps.build.outcome == 'success' }}"))
+		#expect(bundle.contains(#"archs="$(lipo -archs "$app/Contents/MacOS/FinderPresets")""#) && bundle.contains { $0.hasPrefix(#"[[ "$archs" == arm64 ]] ||"#) })
 		// A failed check never releases: the release job needs the check job and has no status function of its own.
 		let release = ci[(try #require(ci.firstIndex { $0.hasPrefix("  release:") }))...]
 		#expect(release.contains("    needs: test-and-build") && release.contains("    if: github.event_name == 'push' && github.ref == 'refs/heads/main'"))
 		#expect(!ci.contains { $0.contains("continue-on-error") || $0.contains("always()") })
 	}
 
-	/// The update key can never change between releases: scripts/check-update-key.sh, which pull requests and the release
-	/// run, compares this commit's SUPublicEDKey with the key of every published release, and tells the build-number check
-	/// whether a release with Sparkle is out (a missing feed is then an error, not "the first release"). Any answer of the
-	/// published feed other than 200 or 404 stops the release.
+	/// The update key can never change between releases: scripts/check-update-key.sh, which pull requests run and the
+	/// release runs through scripts/release-check.sh, compares this commit's SUPublicEDKey with the key of every published
+	/// release, and tells the build-number check whether a release with Sparkle is out (a missing feed is then an error,
+	/// not "the first release"). Any answer of the published feed other than 200 or 404 stops the release.
 	@Test func theReleaseKeepsTheKeyOfTheReleasesSoFar() throws {
 		let script = try Repository.text("scripts/check-update-key.sh")
 		for text in [
@@ -348,24 +352,26 @@ private let publishedTestKey = "11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo="
 			#expect(script.contains(text), "check-update-key.sh: no \(text)")
 		}
 		let release = try Repository.text(".github/workflows/release.yml")
-		#expect(release.contains("\n          ./scripts/check-update-key.sh\n"))
+		#expect(release.contains("\n        id: prepare\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: ./scripts/release-check.sh\n"))
+		#expect(try Repository.text("scripts/release-check.sh").contains("\n./scripts/check-update-key.sh\n"))
 		#expect(release.contains("SPARKLE_RELEASE: ${{ steps.prepare.outputs.sparkle_release }}"))
 		let notFound = try #require(release.range(of: #"if [[ "$status" == 404 ]]; then"#))
 		#expect(release[notFound.upperBound...].prefix(80).contains(#"if [[ -n "$SPARKLE_RELEASE" ]]; then"#))
 		#expect(release.contains(#"[[ "$status" == 200 ]] || fail"#))
 	}
 
-	/// After the publish, the fixed-name dmg and the feed are downloaded again through the latest link (retried until both
-	/// are this release's) and the feed is checked: one item, an integer build number that is the downloaded app's own
-	/// CFBundleVersion, this version, the versioned dmg's address and length, and a signature that verifies against
-	/// SUPublicEDKey.
+	/// After the publish, the fixed-name dmg and the feed are downloaded again through the latest link (retried every 30
+	/// seconds, ten times, until both are this release's, each attempt with its HTTP statuses) and the feed is checked: one
+	/// item, an integer build number that is the downloaded app's own CFBundleVersion, this version, the versioned dmg's
+	/// address and length, a signature that verifies against SUPublicEDKey, and an app built for arm64 only.
 	@Test func thePublishedFeedIsDownloadedAgainAndChecked() throws {
 		let release = try Repository.text(".github/workflows/release.yml")
 		for text in [
-			"for attempt in 1 2 3 4 5 6; do", #"&& curl -fsSL -o appcast.xml "$base/appcast.xml"; then"#, "if same_dmg && same_feed; then break; fi",
+			"attempts=10", "for (( attempt = 1; attempt <= attempts; attempt++ )); do", #"status="$(curl -sSL -o "$file" -w '%{http_code}' "$base/$file" || true)""#,
+			"if [[ $fetched == true ]] && same_dmg && same_feed; then", "if (( attempt < attempts )); then sleep 30; fi",
 			#"[[ "$(feed_value 'count(//item)')" == 1 ]]"#, #"[[ "$feed_build" =~ ^[1-9][0-9]*$ ]]"#, #"[[ "$short" == "$VERSION" ]]"#,
 			#"[[ "$url" == "$server/download/$TAG/FinderPresets-$VERSION.dmg" ]]"#, #"[[ "$length" == "$(stat -f %z FinderPresets.dmg)" ]]"#,
-			#"app_plist="$mount_dir/Finder Presets.app/Contents/Info.plist""#, #"[[ "$feed_build" == "$app_build" ]]"#,
+			#"app_plist="$mount_dir/Finder Presets.app/Contents/Info.plist""#, #"[[ "$feed_build" == "$app_build" ]]"#, #"[[ "$app_archs" == arm64 ]]"#,
 			#"xcrun swift "$GITHUB_WORKSPACE/scripts/ed25519-verify.swift" "$public_key" FinderPresets.dmg "$signature" || verified=$?"#
 		] {
 			#expect(release.contains(text), "release.yml: no \(text)")

@@ -1,6 +1,7 @@
-# Checks every push to main and every pull request: the update key of the releases so far, the tools only a release
-# runs (without a key), the unit tests, and a release build of the app with its bundle inspected. On main, a passing run
-# then calls release.yml, which releases the version in Resources/Info.plist if it is new (see there).
+# Checks every push to main and every pull request: the update key of the releases so far, the release decisions
+# (version, tags, release notes; scripts/release-check.sh --check, without publishing), the tools only a release runs
+# (without a key), the unit tests, and a release build of the app with its bundle inspected. On main, a passing run then
+# calls release.yml, which releases the version in Resources/Info.plist if it is new (see there).
 #
 # When the unit tests fail, the build and the bundle check after them still run, and the job fails all the same: a
 # failing test (the update key's format test, for one) never hides whether the app still builds and passes the
@@ -30,22 +31,23 @@ defaults:
 jobs:
   test-and-build:
     name: 테스트와 앱 빌드
-    # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26 or later.
-    # macos-26 is the Apple Silicon image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app:
+    # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26. macos-26 is the Apple Silicon
+    # image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app; scripts/select-xcode.sh picks
+    # the newest released 26.x and nothing newer (see there for why):
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
     runs-on: macos-26
     timeout-minutes: 30
     steps:
       # With the tags: the update key of every published release is read from its tag.
       - name: 체크아웃 (태그 포함)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
 
       # Shared with release.yml. scripts/toolchain.sh then uses the Xcode chosen here.
-      - name: Xcode 선택 (26 이상 중 최신 정식 버전)
+      - name: Xcode 선택 (26.x 중 최신 정식 버전)
         run: ./scripts/select-xcode.sh
 
       # The check the release job makes before it publishes: SUPublicEDKey must be the key of every published release
@@ -54,6 +56,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./scripts/check-update-key.sh
+
+      # The release job's decisions, made here without publishing (scripts/release-check.sh --check): a version lower
+      # than an existing tag, a tag whose release is unfinished, a stale .github/release-notes.md, or an app that changed
+      # since the tag of its version fails here, before the merge. The pull request's token sees no draft releases, so a
+      # tag without a published release counts as unfinished.
+      - name: 버전·태그·릴리스 노트 확인
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/release-check.sh --check
 
       # scripts/make-appcast.sh and scripts/ed25519-verify.swift run for real only in a release on main. Here they are
       # run without a key: published RFC 8032 test vectors and a stand-in for Sparkle's sign_update. A mistake in them
@@ -79,7 +90,10 @@ jobs:
           app="build/Finder Presets.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           plutil -lint "$app/Contents/Info.plist"
-          lipo -archs "$app/Contents/MacOS/FinderPresets"
+          # Apple Silicon only (the owner's choice; the update feed asks for arm64 too): the app's own executable must be
+          # exactly arm64. The bundled Sparkle.framework is universal and is not checked.
+          archs="$(lipo -archs "$app/Contents/MacOS/FinderPresets")"
+          [[ "$archs" == arm64 ]] || { echo "::error::앱 실행 파일은 arm64 로만 빌드되어야 합니다 (지금: $archs)."; exit 1; }
           # Sparkle: the framework is inside without the XPC services; the binary's only run paths are Contents/Frameworks
           # and the system's Swift libraries; the app has the hardened runtime and exactly its two entitlements. Outputs are
           # read into variables (no `| grep -q`: under pipefail its early exit kills the writer with SIGPIPE).

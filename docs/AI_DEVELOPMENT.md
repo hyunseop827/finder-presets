@@ -62,7 +62,8 @@ the process is as much a part of the project as the code.
 - 249 unit tests across the engine, the app models and the CLI; CI on every push.
 - A layout probe that checks the fixed window, every sheet and the status bar in Korean and English, light and dark.
 - A self-test that runs import → apply → undo → editor → services → quick preset without touching Finder.
-- Commits made with an agent carry a `Co-Authored-By: Claude` line.
+- Commits up to pull request #2 carried a `Co-Authored-By: Claude` line; later commits do not (the rule was dropped in
+  #4, and the README's note on AI says it in one place instead).
 
 ## Why the loop matters
 
