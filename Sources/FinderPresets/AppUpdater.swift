@@ -10,9 +10,11 @@ import Sparkle
 // `AppDelegate.applicationShouldTerminate`, so a task that writes or has Finder quit finishes first (QuitGuard) and the
 // update installs right after.
 //
-// The updater starts only with a feed and a real key (`UpdaterConfiguration`). Without them, as with the placeholder
-// key that Resources/Info.plist holds until the owner puts his in, the app opens like any other build: no alert, no
-// check, and both controls stay disabled.
+// The updater starts only with a feed and a real key (`UpdaterConfiguration`). Resources/Info.plist has carried the
+// owner's real `SUPublicEDKey` since 2026-10-02, when 0.3.0 shipped with it, and it must never change: installed copies
+// accept only updates signed with the key they shipped with (`UpdaterTests` and `scripts/check-update-key.sh` guard
+// it). Should a build ever lack the feed or a real key, the app opens like any other build: no alert, no check, and
+// both controls stay disabled.
 
 /// What Info.plist says about updates, and the decision whether that is enough to start the updater. Values only, so
 /// the decision is tested without a bundle and without Sparkle.

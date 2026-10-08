@@ -18,9 +18,11 @@
 #                                 owner creates and stores it; ci.yml hands it to this workflow, and here only the step
 #                                 that signs ("업데이트 피드 만들기") gets its value. The key check only learns whether
 #                                 it is set.
-# Every run stops in "버전과 릴리스 상태 확인" (scripts/check-update-key.sh, which pull requests run too) when
-# SUPublicEDKey is not the key of the releases that already shipped with one: installed copies would refuse every later
-# update. A run that is going to publish (a version that is not released yet, also when re-run) stops
+# Every run stops in "버전과 릴리스 상태 확인" (scripts/release-check.sh, whose checks pull requests run too, with
+# --check) when a tag is newer than the version, another tag's release is unfinished, the release notes are stale, the
+# app changed since the tag of its version, or SUPublicEDKey is not the key of the releases that already shipped with
+# one (scripts/check-update-key.sh: installed copies would refuse every later update). A run that is going to publish
+# (a version that is not released yet, also when re-run) stops
 #   - right after that step, before anything is built or tagged, when that secret is empty or when SUPublicEDKey in
 #     Resources/Info.plist is not a real public key (the placeholder);
 #   - after the dmg is built and before the tag, when the build number is not higher than the one in the feed that is
@@ -79,8 +81,9 @@ defaults:
 jobs:
   release:
     name: DMG와 GitHub 릴리스
-    # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26 or later.
-    # macos-26 is the Apple Silicon image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app:
+    # swift-tools-version 6.2 (this package and sindresorhus/DSStore) needs Xcode 26. macos-26 is the Apple Silicon
+    # image with Xcode 26.x installed side by side as /Applications/Xcode_<version>.app; scripts/select-xcode.sh picks
+    # the newest released 26.x and nothing newer (see there for why):
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
     runs-on: macos-26
     # Two notarization waits (app, then dmg) of up to 30 minutes each, plus the release build.
@@ -93,114 +96,22 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: 체크아웃 (검사한 커밋, 태그 포함)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
 
+      # The decision: which version, whether it is already released, whether this run publishes and verifies, and that
+      # nothing is released backwards or beside an unfinished release (scripts/release-check.sh; its outputs drive the
+      # steps below, and pull requests run the same checks with --check). It also writes the notes' body for the
+      # release and the feed to $RUNNER_TEMP/release-body.md.
       - name: 버전과 릴리스 상태 확인
         id: prepare
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -u
-          fail() { echo "::error::$*"; exit 1; }
-          # Files that make up the app: a change here after a release needs a new version. The dev CLI and the debug-only
-          # harnesses (#if DEBUG) are not in the release build, so a change to them alone needs none.
-          app_inputs=(Sources Resources Package.swift Package.resolved scripts/build-app.sh scripts/make-icon.swift
-            ':(exclude)Sources/finder-presets' ':(exclude)Sources/FinderPresets/SelfTest.swift'
-            ':(exclude)Sources/FinderPresets/LayoutProbe.swift')
-          notes=.github/release-notes.md
-
-          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
-          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-          [[ "$version" =~ $semver ]] || fail "Resources/Info.plist 의 CFBundleShortVersionString 형식이 잘못되었습니다: '$version' (예: 1.2.0)"
-          tag="v$version"
-
-          [[ "$(git rev-parse 'HEAD^{commit}')" == "$GITHUB_SHA" ]] || fail "체크아웃한 커밋이 테스트한 커밋과 다릅니다."
-          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
-          git merge-base --is-ancestor HEAD refs/remotes/origin/main || fail "main 에 없는 커밋은 릴리스하지 않습니다."
-
-          # Never release backwards: no existing vX.Y.Z tag may be newer than this version.
-          newer() {   # newer A B: A > B for X.Y.Z (bash 3.2)
-            local i a b
-            IFS=. read -r -a a <<< "$1"
-            IFS=. read -r -a b <<< "$2"
-            for i in 0 1 2; do
-              if (( 10#${a[i]} > 10#${b[i]} )); then return 0; fi
-              if (( 10#${a[i]} < 10#${b[i]} )); then return 1; fi
-            done
-            return 1
-          }
-          tags="$(git tag --list 'v*')"
-          while IFS= read -r known; do
-            [[ "$known" =~ ^v ]] && [[ "${known#v}" =~ $semver ]] || continue
-            if newer "${known#v}" "$version"; then
-              fail "$tag 가 이미 있는 $known 보다 낮습니다. Resources/Info.plist 의 버전을 올리세요."
-            fi
-          done <<< "$tags"
-
-          # Release notes: '# vX.Y.Z' on the first line, then what changed.
-          [[ -f "$notes" ]] || fail "$notes 가 없습니다."
-          first="$(head -n 1 "$notes" | tr -d '\r')"
-          [[ "${first%"${first##*[![:space:]]}"}" == "# $tag" ]] || fail "$notes 의 첫 줄은 '# $tag' 이어야 합니다 (지금: '$first')."
-          body="$(tail -n +2 "$notes")"
-          [[ -n "${body//[[:space:]]/}" ]] || fail "$notes 에 바뀐 점을 적으세요."
-          printf '%s\n' "$body" > "$RUNNER_TEMP/release-body.md"
-
-          tag_commit=""
-          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
-            tag_commit="$(git rev-parse "refs/tags/$tag^{commit}")"
-          fi
-          # Drafts carry their future tag name too; the API call fails loudly instead of reading as "no release".
-          releases="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | [.tag_name, (.draft | tostring)] | @tsv')"
-          release_state=none
-          while IFS=$'\t' read -r name draft; do
-            [[ "$name" == "$tag" ]] || continue
-            if [[ "$draft" == true ]]; then
-              [[ "$release_state" == published ]] || release_state=draft
-            else
-              release_state=published
-            fi
-          done <<< "$releases"
-
-          publish=true
-          verify=true
-          if [[ "$release_state" == published ]]; then
-            [[ -n "$tag_commit" ]] || fail "릴리스 $tag 는 있는데 태그를 찾지 못했습니다."
-            set +e
-            git diff --quiet "$tag_commit" HEAD -- "${app_inputs[@]}"
-            changed=$?
-            set -e
-            case $changed in
-              0) ;;
-              1) fail "$tag 릴리스 뒤에 앱이 바뀌었습니다. Resources/Info.plist 의 버전을 올리고 $notes 를 새 버전으로 고치세요." ;;
-              *) fail "$tag 와 지금 커밋을 비교하지 못했습니다." ;;
-            esac
-            publish=false
-            # A re-run of the commit that published it checks the download again.
-            if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then verify=false; fi
-            echo "$tag 는 이미 릴리스되었고 그 뒤로 앱은 바뀌지 않았습니다. 새로 올릴 것이 없습니다."
-          elif [[ -n "$tag_commit" && "$tag_commit" != "$GITHUB_SHA" ]]; then
-            fail "태그 $tag 가 다른 커밋(${tag_commit:0:7})에 있고 아직 릴리스되지 않았습니다. 그 커밋의 CI 실행에서 'Re-run failed jobs'로 마치거나, 버전을 올리세요. 태그는 옮기지 않습니다."
-          else
-            echo "$tag 를 릴리스합니다 (태그: $([[ -n "$tag_commit" ]] && echo 있음 || echo 없음), 릴리스: $release_state)."
-          fi
-
-          # In-app updates: SUPublicEDKey must be the key of every published release that shipped with one (pull requests
-          # run the same script). It also writes sparkle_release, the newest such release other than this version's, for
-          # the build-number check below.
-          ./scripts/check-update-key.sh
-          {
-            echo "version=$version"
-            echo "tag=$tag"
-            echo "publish=$publish"
-            echo "verify=$verify"
-            echo "tag_exists=$([[ -n "$tag_commit" ]] && echo true || echo false)"
-            echo "release_state=$release_state"
-          } >> "$GITHUB_OUTPUT"
+        run: ./scripts/release-check.sh
 
       # The first thing a run that is going to publish does, before Xcode is selected or anything is built: without the
       # key no update feed can be signed, and a release without a feed, or with a public key that is not the owner's,
@@ -227,7 +138,7 @@ jobs:
           echo "OK  SPARKLE_PRIVATE_KEY 있음, SUPublicEDKey $key"
 
       # Shared with ci.yml. scripts/toolchain.sh then uses the Xcode chosen here.
-      - name: Xcode 선택 (26 이상 중 최신 정식 버전)
+      - name: Xcode 선택 (26.x 중 최신 정식 버전)
         if: steps.prepare.outputs.publish == 'true'
         run: ./scripts/select-xcode.sh
 
@@ -343,6 +254,18 @@ jobs:
           NOTARY_KEY_PATH: ${{ steps.notary.outputs.key_path }}
           NOTARY_TIMEOUT: 30m
         run: ./scripts/make-dmg.sh "$VERSION"
+
+      # Apple Silicon only (the owner's choice; the feed's item asks for arm64 too): the executable of the app that went
+      # into the dmg must be exactly arm64. The bundled Sparkle.framework is universal and is not checked.
+      - name: 아키텍처 확인 (arm64만)
+        if: steps.prepare.outputs.publish == 'true'
+        env:
+          APP: ${{ steps.dmg.outputs.app }}
+        run: |
+          [[ -n "$APP" && -x "$APP/Contents/MacOS/FinderPresets" ]] || { echo "::error::방금 만든 앱을 찾지 못했습니다 (make-dmg.sh 의 app 출력: '$APP')."; exit 1; }
+          archs="$(lipo -archs "$APP/Contents/MacOS/FinderPresets")"
+          [[ "$archs" == arm64 ]] || { echo "::error::앱 실행 파일은 arm64 로만 빌드되어야 합니다 (지금: $archs). 릴리스하지 않았습니다."; exit 1; }
+          echo "OK  arm64 ($APP)"
 
       # Sparkle offers a build only when its number is higher than the installed copy's, and never installs a lower
       # one. The number is this CI run's, which only grows — unless ci.yml is renamed or recreated, which restarts the
@@ -534,23 +457,35 @@ jobs:
           same_feed() { # the download is the feed of this release: the file this run built, or one about this version
             if [[ -n "$BUILT_FEED" ]]; then cmp -s appcast.xml "$BUILT_FEED"; else [[ "$(feed_value '//item/*[local-name()="shortVersionString"]')" == "$VERSION" ]]; fi
           }
-          # The latest link can lag a few seconds behind the publish, and not for every file at the same moment: the
-          # previous release has a dmg and a feed under the same names, so their downloads succeed too. Try again
-          # until both are this release's; after the last attempt the checks below say which one is not.
+          # The latest link can lag a few minutes behind the publish (about 2.5 minutes on 2026-10-02), and not for
+          # every file at the same moment: the previous release has a dmg and a feed under the same names, so their
+          # downloads succeed too. Try again every 30 seconds, ten times in all (about five minutes), until both are
+          # this release's; each attempt logs its number and the HTTP status of each file. After the last attempt the
+          # checks below say which one is not.
+          # The release itself is published by now; a failure here only means it was not verified, so the job is re-run
+          # on the same commit (gh run rerun <run-id> --failed), which only verifies again.
+          rerun="릴리스 $TAG 는 이미 발행되었습니다. 같은 커밋에서 실패한 작업을 다시 실행하면(gh run rerun <run-id> --failed) 이 확인만 다시 합니다."
+          attempts=10
           fetched=false
-          for attempt in 1 2 3 4 5 6; do
+          for (( attempt = 1; attempt <= attempts; attempt++ )); do
             rm -f FinderPresets.dmg FinderPresets.dmg.sha256 appcast.xml
-            fetched=false
-            if curl -fsSL -o FinderPresets.dmg "$base/FinderPresets.dmg" \
-              && curl -fsSL -o FinderPresets.dmg.sha256 "$base/FinderPresets.dmg.sha256" \
-              && curl -fsSL -o appcast.xml "$base/appcast.xml"; then
-              fetched=true
-              if same_dmg && same_feed; then break; fi
+            fetched=true
+            statuses=""
+            for file in FinderPresets.dmg FinderPresets.dmg.sha256 appcast.xml; do
+              # Without -f, so the status is read instead of guessed; curl prints 000 when there was no answer at all.
+              status="$(curl -sSL -o "$file" -w '%{http_code}' "$base/$file" || true)"
+              statuses="$statuses $file: HTTP ${status:-000}"
+              [[ "$status" == 200 ]] || fetched=false
+            done
+            if [[ $fetched == true ]] && same_dmg && same_feed; then
+              echo "시도 $attempt/$attempts:$statuses — $TAG 의 파일입니다."
+              break
             fi
-            if [[ $attempt != 6 ]]; then sleep $((attempt * 10)); fi
+            echo "시도 $attempt/$attempts:$statuses — 아직 $TAG 의 파일이 아니거나 받지 못했습니다."
+            if (( attempt < attempts )); then sleep 30; fi
           done
-          [[ $fetched == true ]] || fail "$base 에서 DMG·체크섬·appcast.xml 가운데 받아지지 않는 것이 있습니다."
-          same_dmg || fail "$base/FinderPresets.dmg 가 $TAG 의 DMG와 다릅니다."
+          [[ $fetched == true ]] || fail "$base 에서 DMG·체크섬·appcast.xml 가운데 받아지지 않는 것이 있습니다. $rerun"
+          same_dmg || fail "$base/FinderPresets.dmg 가 $TAG 의 DMG와 다릅니다. $rerun"
           shasum -a 256 -c FinderPresets.dmg.sha256
           hdiutil verify -quiet FinderPresets.dmg
           echo "OK  $base/FinderPresets.dmg ($TAG)"
@@ -560,7 +495,7 @@ jobs:
           # signature is checked over the download above: the fixed-name dmg is the same file as the versioned one.
           xmllint --noout appcast.xml || fail "$base/appcast.xml 이 올바른 XML이 아닙니다."
           if [[ -n "$BUILT_FEED" ]] && ! cmp -s appcast.xml "$BUILT_FEED"; then
-            fail "$base/appcast.xml 이 이번 실행에서 만들어 올린 것과 다릅니다."
+            fail "$base/appcast.xml 이 이번 실행에서 만들어 올린 것과 다릅니다. $rerun"
           fi
           feed_build="$(feed_value '//item/*[local-name()="version"]')"
           short="$(feed_value '//item/*[local-name()="shortVersionString"]')"
@@ -569,7 +504,7 @@ jobs:
           signature="$(feed_value '//item/enclosure/@*[local-name()="edSignature"]')"
           [[ "$(feed_value 'count(//item)')" == 1 ]] || fail "appcast.xml 에 항목이 하나가 아닙니다."
           [[ "$feed_build" =~ ^[1-9][0-9]*$ ]] || fail "appcast.xml 의 빌드 번호(sparkle:version)가 정수가 아닙니다: '$feed_build'"
-          [[ "$short" == "$VERSION" ]] || fail "appcast.xml 의 버전이 '$short' 입니다 ($VERSION 이어야 합니다)."
+          [[ "$short" == "$VERSION" ]] || fail "appcast.xml 의 버전이 '$short' 입니다 ($VERSION 이어야 합니다). $rerun"
           [[ "$url" == "$server/download/$TAG/FinderPresets-$VERSION.dmg" ]] || fail "appcast.xml 의 다운로드 주소가 다릅니다: '$url'"
           [[ "$length" == "$(stat -f %z FinderPresets.dmg)" ]] || fail "appcast.xml 의 파일 크기($length)가 받은 DMG와 다릅니다."
           # The feed's build number is the released app's own CFBundleVersion, read from the downloaded dmg. Sparkle
@@ -581,11 +516,14 @@ jobs:
           app_plist="$mount_dir/Finder Presets.app/Contents/Info.plist"
           app_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_plist" 2> /dev/null || true)"
           app_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app_plist" 2> /dev/null || true)"
+          # Apple Silicon only: the released app's own executable (not the universal Sparkle.framework beside it).
+          app_archs="$(lipo -archs "$mount_dir/Finder Presets.app/Contents/MacOS/FinderPresets" 2> /dev/null || true)"
           # hdiutil sometimes answers "Resource busy" for a moment: try, wait, try again, then force (read-only mount).
           hdiutil detach -quiet "$mount_dir" \
             || { sleep 2; hdiutil detach -quiet "$mount_dir"; } \
             || hdiutil detach -quiet -force "$mount_dir"
           [[ "$app_version" == "$VERSION" ]] || fail "받은 DMG 안 앱의 버전이 '$app_version' 입니다 ($VERSION 이어야 합니다)."
+          [[ "$app_archs" == arm64 ]] || fail "받은 DMG 안 앱의 실행 파일이 arm64 로만 빌드되지 않았습니다 (지금: '$app_archs')."
           [[ "$feed_build" == "$app_build" ]] || fail "appcast.xml 의 빌드 번호($feed_build)가 받은 DMG 안 앱의 빌드 번호(CFBundleVersion '$app_build')와 다릅니다."
           public_key="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$GITHUB_WORKSPACE/Resources/Info.plist")"
           verified=0

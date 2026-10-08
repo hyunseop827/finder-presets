@@ -29,7 +29,8 @@ xcuserdata/
 # Release outputs and signing material. scripts/make-dmg.sh writes the disk image and its checksum into build/
 # (ignored above); a copy made anywhere else must not be committed either. Certificates (.p12, .cer), App Store
 # Connect API keys (AuthKey_<id>.p8; *.p8 covers them, the explicit name documents what they look like),
-# provisioning profiles and a local .env with secrets belong in the keychain or the repository secrets
+# provisioning profiles, an exported Sparkle private key (generate_keys -x writes <repo>.key; *.pem covers other key
+# exports) and a local .env with secrets belong in the keychain or the repository secrets
 # (see .github/workflows/release.yml), never in git.
 *.dmg
 *.dmg.sha256
@@ -38,4 +39,6 @@ xcuserdata/
 AuthKey_*.p8
 *.cer
 *.provisionprofile
+*.key
+*.pem
 .env

@@ -1,0 +1,11 @@
+# Keeps the actions that .github/workflows pin to a commit (actions/checkout@<sha> # vX.Y.Z) current: one pull request a
+# week per update, titled "ci: …" (the prefix AGENTS.md step 6 asks for). Nothing else is updated this way: the Swift
+# packages are pinned in Package.resolved by hand (Sparkle is raised together with release.yml's SPARKLE_VERSION).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
