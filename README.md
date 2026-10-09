@@ -58,6 +58,7 @@ shasum -a 256 -c FinderPresets.dmg.sha256
 - **System-wide:** change Finder's default view and, optionally, your home folder in one step.
 - **Finder restarts for you:** the app restarts Finder when needed and reopens your Finder windows.
 - **Finder right-click menu:** add folders, make presets or apply from Finder's Services menu.
+- **Light and dark:** follows the system appearance.
 - **English and Korean**
 
 ## Privacy
