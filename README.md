@@ -19,7 +19,7 @@ Save a Finder view as a preset and apply it to any folder, to all its subfolders
 - **Install:** open the DMG and drag **Finder Presets** to **Applications**.
 - **Update:** from 0.3.0 on, the app updates itself. Choose **Finder Presets → Check for Updates…** (or **Check for Updates** at the bottom right of the window) to check right away; while it is running, the app also checks once a day on its own. When there is a newer version, it shows what changed and asks. Only when you choose **Install Update** does it download the new version, verify its signature, replace the app and reopen it. Keep the app in **Applications**. An app opened inside the DMG cannot update itself. Versions before 0.3.0 have no updater: replace the app with the one from the new DMG once.
 - **First launch:** the app is ad-hoc signed and not notarized by Apple. If macOS blocks it, try opening it once, then choose **System Settings → Privacy & Security → Open Anyway** ([Apple's instructions](https://support.apple.com/guide/mac-help/mh40616/mac)).
-- **Finder permission:** when the app first restarts Finder, macOS asks to let it control Finder. Allow it. After an update, macOS may ask again, for Finder and for folders it protects: the app is ad-hoc signed, so each version counts as a new app to macOS.
+- **Finder permission:** when the app first restarts Finder, macOS asks to let it control Finder. Allow it.
 - **What's new:** see the [release notes](https://github.com/hyunseop827/finder-presets/releases).
 
 <details>
