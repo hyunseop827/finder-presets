@@ -55,7 +55,7 @@ the process is as much a part of the project as the code.
 - **One icon, many drafts.** Several rounds of icon concepts were drawn in code and compared at Dock and Finder sizes; the
   two-tone folder won, and Apple's Finder face was avoided on purpose.
 - **Release by version number,** the same model as my other app [Menu Pulse](https://github.com/hyunseop827/menu-pulse).
-- **Updates inside the app (0.3.0).** Sparkle checks the release feed once a day and on 업데이트 확인…, and installs only when you choose; every update is verified with an EdDSA key whose private half only I hold. A local test on this Mac showed an ad-hoc signed copy updating itself and relaunching without Gatekeeper asking again, but with the app's hardened runtime and the daily check turned off; the settings this version ships with are not tested that way yet.
+- **Updates inside the app (0.3.0).** Sparkle checks the release feed once a day and on 업데이트 확인…, and installs only when you choose; every update is verified with an EdDSA key whose private half only I hold. A local test on this Mac first showed an ad-hoc signed copy updating itself and relaunching without Gatekeeper asking again, but with the app's hardened runtime and the daily check turned off. The first real update, 0.3.0 → 0.3.1 with the shipped settings on macOS 27, was confirmed on 2026-10-09: the copy in Applications updated itself and reopened, Gatekeeper did not block it, and macOS did not ask for the Finder permission again. The same day my other two apps, [Hangeul Filename Fixer](https://github.com/hyunseop827/hangeul-filename-fixer) and [Menu Pulse](https://github.com/hyunseop827/menu-pulse), made their first in-app updates the same way.
 
 ## By the numbers
 
